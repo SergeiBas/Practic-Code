@@ -2,9 +2,15 @@ package org.example.practiccode.controller;
 
 import org.example.practiccode.model.Employee;
 import org.example.practiccode.service.EmployeeService;
+// Імпортуємо репозиторії для посад та департаментів (перевір їхні точні назви у себе)
+import org.example.practiccode.repository.DepartmentRepository;
+import org.example.practiccode.repository.PositionRepository;
+
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PostMapping;
 
 import java.util.List;
 
@@ -12,22 +18,38 @@ import java.util.List;
 public class EmployeeController {
 
     private final EmployeeService employeeService;
+    private final DepartmentRepository departmentRepository; // Напряму репозиторій
+    private final PositionRepository positionRepository;     // Напряму репозиторій
 
-    // Впроваджуємо сервіс через конструктор
-    public EmployeeController(EmployeeService employeeService) {
+    // Впроваджуємо все через конструктор
+    public EmployeeController(EmployeeService employeeService,
+                              DepartmentRepository departmentRepository,
+                              PositionRepository positionRepository) {
         this.employeeService = employeeService;
+        this.departmentRepository = departmentRepository;
+        this.positionRepository = positionRepository;
     }
 
-    // Обробляємо запит на головну сторінку http://localhost:8080/
-    @GetMapping("/")
+    @GetMapping({"/", "/employees"})
     public String viewHomePage(Model model) {
-        // Отримуємо список працівників із сервісу
+        // 1. Виведення списку працівників
         List<Employee> listEmployees = employeeService.getAllEmployees();
-
-        // Передаємо цей список у HTML-шаблон Thymeleaf під ім'ям "employees"
         model.addAttribute("employees", listEmployees);
 
-        // Повертаємо назву HTML-файлу (index.html), який лежить у templates
+        // 2. Порожній об'єкт для форми додавання
+        Employee newEmployee = new Employee();
+        model.addAttribute("employee", newEmployee);
+
+        // 3. Викликаємо стандартний метод .findAll() прямо з репозиторіїв
+        model.addAttribute("departments", departmentRepository.findAll());
+        model.addAttribute("positions", positionRepository.findAll());
+
         return "index";
+    }
+
+    @PostMapping("/employees/save")
+    public String saveEmployee(@ModelAttribute("employee") Employee employee) {
+        employeeService.saveEmployee(employee);
+        return "redirect:/";
     }
 }

@@ -1,10 +1,99 @@
 <!DOCTYPE html>
-<html lang="en">
+<html xmlns:th="http://www.thymeleaf.org" lang="uk">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>Автоматизація кадрової служби</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
-<body>
+<body class="bg-light">
+
+<div class="container mt-5 mb-5">
+
+    <div class="card shadow mb-4">
+        <div class="card-header bg-success text-white">
+            <h4 class="mb-0">Оформлення нового працівника (Створення профілю)</h4>
+        </div>
+        <div class="card-body">
+            <form th:action="@{/employees/save}" th:object="${employee}" method="POST">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label">Прізвище</label>
+                        <input type="text" th:field="*{lastName}" class="form-cols form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Ім'я</label>
+                        <input type="text" th:field="*{firstName}" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">По батькові</label>
+                        <input type="text" th:field="*{middleName}" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email</label>
+                        <input type="email" th:field="*{email}" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Телефон</label>
+                        <input type="text" th:field="*{phone}" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Підрозділ (Департамент)</label>
+                        <select th:field="*{department}" class="form-select" required>
+                            <option value="">Оберіть підрозділ...</option>
+                            <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Посада</label>
+                        <select th:field="*{position}" class="form-select" required>
+                            <option value="">Оберіть посаду...</option>
+                            <option th:each="pos : ${positions}" th:value="${pos.id}" th:text="${pos.title}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Дата початку роботи</label>
+                        <input type="date" th:field="*{hireDate}" class="form-control" required>
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="submit" class="btn btn-success px-4">Додати в систему</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white text-center">
+            <h3 class="mb-0">Кадрова система — Співробітники</h3>
+        </div>
+        <div class="card-body">
+            <table class="table table-bordered table-striped table-hover align-middle">
+                <thead class="table-dark">
+                <tr>
+                    <th>ID</th>
+                    <th>Прізвище І.П.</th>
+                    <th>Підрозділ</th>
+                    <th>Посада</th>
+                    <th>Email</th>
+                    <th>Телефон</th>
+                    <th>Дата найму</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="emp : ${employees}">
+                    <td th:text="${emp.id}">1</td>
+                    <td th:text="${emp.lastName + ' ' + emp.firstName + ' ' + emp.middleName}">ПІБ</td>
+                    <td th:text="${emp.department != null ? emp.department.name : 'Не вказано'}">Підрозділ</td>
+                    <td th:text="${emp.position != null ? emp.position.title : 'Не вказано'}">Посада</td>
+                    <td th:text="${emp.email}">email@example.com</td>
+                    <td th:text="${emp.phone}">+380...</td>
+                    <td th:text="${emp.hireDate}">2026-05-20</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
 </body>
 </html>
