@@ -2,98 +2,467 @@
 <html xmlns:th="http://www.thymeleaf.org" lang="uk">
 <head>
     <meta charset="UTF-8">
-    <title>Автоматизація кадрової служби</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <title>HR & IT Корпоративна Система</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        body, html { height: 100%; margin: 0; background-color: #f8f9fa; }
+        .sidebar { height: 100vh; position: fixed; top: 0; left: 0; z-index: 100; background-color: #212529; color: white; display: flex; flex-direction: column; justify-content: space-between; }
+        .main-content { margin-left: 25%; padding: 20px; width: 75%; }
+        @media (max-width: 992px) { .sidebar { position: relative; height: auto; width: 100%; } .main-content { margin-left: 0; width: 100%; } }
+        .hr-line { border-top: 3px solid #6c757d; margin: 30px 0; opacity: 1; }
+        .btn-xs { padding: 1px 5px; font-size: 0.75rem; border-radius: 3px; }
+    </style>
 </head>
-<body class="bg-light">
+<body>
 
-<div class="container mt-5 mb-5">
+<div class="container-fluid h-100 p-0 d-flex flex-column flex-md-row">
 
-    <div class="card shadow mb-4">
-        <div class="card-header bg-success text-white">
-            <h4 class="mb-0">Оформлення нового працівника (Створення профілю)</h4>
+    <div class="col-12 col-md-3 sidebar p-3 shadow">
+        <div>
+            <h4 class="text-center mb-4 text-success border-bottom pb-2"><i class="bi bi-building-gear"></i> PortalCRM</h4>
+            <div class="text-center my-4">
+                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200"
+                     class="rounded-circle img-thumbnail mb-3 shadow-sm" alt="Аватар" style="width: 110px; height: 110px; object-fit: cover;">
+                <h5 class="mb-1">Іванова Анна Петрівна</h5>
+                <p class="badge bg-primary text-wrap mb-0" style="font-size: 0.85rem;">Роль: Головний Кадровик</p>
+            </div>
+            <hr class="text-secondary">
         </div>
-        <div class="card-body">
-            <form th:action="@{/employees/save}" th:object="${employee}" method="POST">
-                <div class="row g-3">
-                    <div class="col-md-4">
-                        <label class="form-label">Прізвище</label>
-                        <input type="text" th:field="*{lastName}" class="form-cols form-control" required>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Ім'я</label>
-                        <input type="text" th:field="*{firstName}" class="form-control" required>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">По батькові</label>
-                        <input type="text" th:field="*{middleName}" class="form-control">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Email</label>
-                        <input type="email" th:field="*{email}" class="form-control" required>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Телефон</label>
-                        <input type="text" th:field="*{phone}" class="form-control">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Підрозділ (Департамент)</label>
-                        <select th:field="*{department}" class="form-select" required>
-                            <option value="">Оберіть підрозділ...</option>
-                            <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name}"></option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Посада</label>
-                        <select th:field="*{position}" class="form-select" required>
-                            <option value="">Оберіть посаду...</option>
-                            <option th:each="pos : ${positions}" th:value="${pos.id}" th:text="${pos.title}"></option>
-                        </select>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Дата початку роботи</label>
-                        <input type="date" th:field="*{hireDate}" class="form-control" required>
-                    </div>
-                    <div class="col-12 text-end">
-                        <button type="submit" class="btn btn-success px-4">Додати в систему</button>
-                    </div>
-                </div>
-            </form>
+        <div class="mb-2">
+            <button class="btn btn-outline-light w-100 text-start" data-bs-toggle="modal" data-bs-target="#settingsModal">
+                <i class="bi bi-gear-fill me-2"></i> Налаштування
+            </button>
         </div>
     </div>
 
-    <div class="card shadow">
-        <div class="card-header bg-primary text-white text-center">
-            <h3 class="mb-0">Кадрова система — Співробітники</h3>
+    <div class="main-content">
+
+        <div class="row g-3 align-items-center mb-4 bg-white p-3 rounded shadow-sm">
+            <div class="col-12 col-sm-4 text-start">
+                <a href="/employees/add-form" class="btn btn-success fw-bold">
+                    <i class="bi bi-person-plus-fill me-1"></i> Створити нову заявку
+                </a>
+            </div>
+            <div class="col-12 col-sm-8">
+                <form method="GET" action="/" class="d-flex justify-content-sm-end">
+                    <div class="input-group" style="max-width: 400px;">
+                        <input type="text" name="searchKeyword" class="form-control" placeholder="Пошук працівника...">
+                        <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i></button>
+                    </div>
+                </form>
+            </div>
         </div>
-        <div class="card-body">
-            <table class="table table-bordered table-striped table-hover align-middle">
-                <thead class="table-dark">
-                <tr>
-                    <th>ID</th>
-                    <th>Прізвище І.П.</th>
-                    <th>Підрозділ</th>
-                    <th>Посада</th>
-                    <th>Email</th>
-                    <th>Телефон</th>
-                    <th>Дата найму</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr th:each="emp : ${employees}">
-                    <td th:text="${emp.id}">1</td>
-                    <td th:text="${emp.lastName + ' ' + emp.firstName + ' ' + emp.middleName}">ПІБ</td>
-                    <td th:text="${emp.department != null ? emp.department.name : 'Не вказано'}">Підрозділ</td>
-                    <td th:text="${emp.position != null ? emp.position.title : 'Не вказано'}">Посада</td>
-                    <td th:text="${emp.email}">email@example.com</td>
-                    <td th:text="${emp.phone}">+380...</td>
-                    <td th:text="${emp.hireDate}">2026-05-20</td>
-                </tr>
-                </tbody>
-            </table>
+
+        <div class="mb-4">
+            <h3 class="text-warning fw-bold mb-3"><i class="bi bi-exclamation-triangle-fill"></i> Потребують уваги</h3>
+            <div class="accordion" id="activeAccordion">
+                <div class="accordion-item mb-2 border-warning shadow-sm" th:each="emp : ${activeEmployees}">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed bg-white text-dark fw-bold employee-toggle-btn" type="button"
+                                data-bs-toggle="collapse"
+                                th:data-bs-target="'#collapse-active-' + ${emp.id}"
+                                th:data-emp-id="${emp.id}"
+                                data-prefix="active">
+                            👨‍💼 [[${emp.lastName}]] [[${emp.firstName}]]
+                            <span class="badge bg-warning text-dark ms-auto">Активна заявка</span>
+                        </button>
+                    </h2>
+                    <div th:id="'collapse-active-' + ${emp.id}" class="accordion-collapse collapse" data-bs-parent="#activeAccordion">
+                        <div class="accordion-body bg-white">
+                            <div class="row">
+                                <div class="col-md-4 border-end">
+                                    <h6>📋 Інформація:</h6>
+                                    <p class="mb-1 small"><strong>Посада:</strong> [[${emp.position?.title ?: '—'}]]</p>
+                                    <p class="mb-1 small"><strong>Відділ:</strong> [[${emp.department?.name ?: '—'}]]</p>
+                                    <p class="mb-1 small"><strong>Email:</strong> [[${emp.email}]]</p>
+                                    <p class="mb-1 small"><strong>Тел:</strong> [[${emp.phone}]]</p>
+                                </div>
+                                <div class="col-md-4 border-end">
+                                    <h6>💻 Техніка працівника:</h6>
+                                    <ul class="list-group list-group-flush mb-2" th:id="'equipment-list-active-' + ${emp.id}">
+                                        <li class="list-group-item text-muted small py-1 bg-transparent border-0">Завантаження з API...</li>
+                                    </ul>
+                                    <button class="btn btn-sm btn-outline-primary mt-2 manage-eq-btn" th:data-emp-id="${emp.id}" th:data-emp-name="${emp.firstName} + ' ' + ${emp.lastName}">
+                                        <i class="bi bi-laptop"></i> Керувати технікою
+                                    </button>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>📋 Кадрові заявки:</h6>
+                                    <div th:id="'requests-list-active-' + ${emp.id}">
+                                        <span class="text-muted small">Завантаження з API...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-muted small p-2" th:if="${#lists.isEmpty(activeEmployees)}">Немає активних процесів.</div>
+            </div>
+        </div>
+
+        <hr class="hr-line">
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-secondary text-white">
+                <h4 class="mb-0"><i class="bi bi-diagram-3"></i> Всі працівники за відділами</h4>
+            </div>
+            <div class="card-body bg-light">
+                <div class="accordion" id="departmentsAccordion">
+                    <div th:each="entry, deptStat : ${employeesByDepartment}" class="accordion-item mb-2 border rounded shadow-sm">
+                        <h2 class="accordion-header" th:id="'deptHeader-' + ${deptStat.index}">
+                            <button class="accordion-button collapsed bg-white fw-bold text-dark" type="button"
+                                    data-bs-toggle="collapse" th:data-bs-target="'#deptCollapse-' + ${deptStat.index}">
+                                📁 [[${entry.key}]] <span class="badge bg-secondary ms-2">[[${entry.value.size()}]]</span>
+                            </button>
+                        </h2>
+                        <div th:id="'deptCollapse-' + ${deptStat.index}" class="accordion-collapse collapse" data-bs-parent="#departmentsAccordion">
+                            <div class="accordion-body bg-white">
+                                <div class="accordion" th:id="'employeesAccordion-' + ${deptStat.index}">
+
+                                    <div th:each="emp : ${entry.value}" class="accordion-item mb-2">
+                                        <h2 class="accordion-header">
+                                            <button class="accordion-button collapsed bg-light text-dark employee-toggle-btn" type="button"
+                                                    data-bs-toggle="collapse"
+                                                    th:data-bs-target="'#collapse-normal-' + ${emp.id}"
+                                                    th:data-emp-id="${emp.id}"
+                                                    data-prefix="normal">
+                                                <span>[[${emp.lastName}]] [[${emp.firstName}]]</span>
+                                                <span class="text-muted small ms-2">([[${emp.position?.title ?: 'Немає посади'}]])</span>
+                                            </button>
+                                        </h2>
+                                        <div th:id="'collapse-normal-' + ${emp.id}" class="accordion-collapse collapse" th:data-bs-parent="'#employeesAccordion-' + ${deptStat.index}">
+                                            <div class="accordion-body bg-white">
+                                                <div class="row">
+                                                    <div class="col-md-4 border-end">
+                                                        <h6>📋 Інформація:</h6>
+                                                        <p class="mb-1 small"><strong>Посада:</strong> [[${emp.position?.title ?: '—'}]]</p>
+                                                        <p class="mb-1 small"><strong>Відділ:</strong> [[${emp.department?.name ?: '—'}]]</p>
+                                                        <p class="mb-1 small"><strong>Email:</strong> [[${emp.email}]]</p>
+                                                        <p class="mb-1 small"><strong>Тел:</strong> [[${emp.phone}]]</p>
+                                                    </div>
+                                                    <div class="col-md-4 border-end">
+                                                        <h6>💻 Техніка працівника:</h6>
+                                                        <ul class="list-group list-group-flush mb-2" th:id="'equipment-list-normal-' + ${emp.id}">
+                                                            <li class="list-group-item text-muted small py-1 bg-transparent border-0">Завантаження з API...</li>
+                                                        </ul>
+                                                        <button class="btn btn-sm btn-outline-primary mt-2 manage-eq-btn" th:data-emp-id="${emp.id}" th:data-emp-name="${emp.firstName} + ' ' + ${emp.lastName}">
+                                                            <i class="bi bi-laptop"></i> Керувати технікою
+                                                        </button>
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        <h6>📋 Кадрові заявки:</h6>
+                                                        <div th:id="'requests-list-normal-' + ${emp.id}">
+                                                            <span class="text-muted small">Завантаження з API...</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-5 border-secondary-subtle opacity-75">
+            <div class="card-header bg-dark-subtle text-secondary d-flex justify-content-between align-items-center py-2">
+                <h5 class="mb-0 fs-6 fw-normal"><i class="bi bi-archive-fill"></i> Архів: Звільнені працівники</h5>
+                <span class="badge bg-secondary">[[${firedEmployees.size()}]]</span>
+            </div>
+            <div class="card-body bg-white p-2">
+                <div th:if="${firedEmployees.isEmpty()}" class="text-center text-muted py-2 small">Архів порожній</div>
+                <div th:if="${!firedEmployees.isEmpty()}" class="accordion accordion-flush" id="firedEmployeesAccordion">
+                    <div th:each="emp : ${firedEmployees}" class="accordion-item mb-1 border rounded-1">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed py-2 px-3 text-secondary bg-light employee-toggle-btn" type="button"
+                                    data-bs-toggle="collapse"
+                                    th:data-bs-target="'#collapse-fired-' + ${emp.id}"
+                                    th:data-emp-id="${emp.id}"
+                                    data-prefix="fired">
+                                <span class="text-decoration-line-through text-muted small fw-medium">[[${emp.lastName}]] [[${emp.firstName}]]</span>
+                            </button>
+                        </h2>
+                        <div th:id="'collapse-fired-' + ${emp.id}" class="accordion-collapse collapse" data-bs-parent="#firedEmployeesAccordion">
+                            <div class="accordion-body bg-white pt-2">
+                                <div class="row g-2">
+                                    <div class="col-md-4 border-end">
+                                        <p class="mb-1 small"><strong>Посада:</strong> [[${emp.position?.title ?: '—'}]]</p>
+                                        <p class="mb-1 small"><strong>Відділ:</strong> [[${emp.department?.name ?: '—'}]]</p>
+                                    </div>
+                                    <div class="col-md-4 border-end">
+                                        <h6>💻 Техніка:</h6>
+                                        <ul class="list-group list-group-flush mb-2" th:id="'equipment-list-fired-' + ${emp.id}">
+                                            <li class="list-group-item text-muted small py-1 bg-transparent border-0">Завантаження...</li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <h6>📜 Історія заявок:</h6>
+                                        <div th:id="'requests-list-fired-' + ${emp.id}">
+                                            <span class="text-muted small">Завантаження...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="modal fade" id="equipmentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title"><i class="bi bi-pc-display-horizontal"></i> Ресурси працівника: <span id="modalEmployeeName" class="text-info"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addEquipmentForm" class="p-3 bg-light rounded border mb-4">
+                    <h6 class="text-success fw-bold mb-3"><i class="bi bi-plus-circle-fill"></i> Видати новий ресурс</h6>
+                    <input type="hidden" id="modalEmployeeId" name="employeeId">
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <input type="text" id="eqItemName" class="form-control form-control-sm" placeholder="Назва (напр. MacBook)" required>
+                        </div>
+                        <div class="col-md-4">
+                            <input type="text" id="eqSerialNumber" class="form-control form-control-sm" placeholder="Серійний номер" required>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="input-group input-group-sm">
+                                <input type="text" id="eqComment" class="form-control" placeholder="Коментар">
+                                <button class="btn btn-success" type="submit">Додати</button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+                <h6 class="fw-bold mb-2"><i class="bi bi-list-task"></i> Актуальний список техніки:</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover align-middle border">
+                        <thead class="table-secondary">
+                        <tr>
+                            <th>Ресурс / Модель</th>
+                            <th>Серійний номер</th>
+                            <th>Коментар</th>
+                            <th class="text-end">Дія</th>
+                        </tr>
+                        </thead>
+                        <tbody id="modalEquipmentTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        console.log("REST API Інтеграція підключена.");
+
+        // Глобальний клік-лісенер, що не боїться перерендерингу структур
+        document.addEventListener('click', function(e) {
+
+            // 1. Клік на кнопку розгортання картки працівника
+            const toggleBtn = e.target.closest('.employee-toggle-btn');
+            if (toggleBtn) {
+                const empId = toggleBtn.getAttribute('data-emp-id');
+                const prefix = toggleBtn.getAttribute('data-prefix'); // active, normal або fired
+
+                if (empId && prefix) {
+                    const eqContainer = document.getElementById(`equipment-list-${prefix}-${empId}`);
+                    const reqContainer = document.getElementById(`requests-list-${prefix}-${empId}`);
+
+                    if (eqContainer) loadEquipmentFromAPI(empId, eqContainer);
+                    if (reqContainer) loadRequestsFromAPI(empId, reqContainer, prefix);
+                }
+                return;
+            }
+
+            // 2. Клік на керування технікою (відкриття модалки)
+            const manageBtn = e.target.closest('.manage-eq-btn');
+            if (manageBtn) {
+                const empId = manageBtn.getAttribute('data-emp-id');
+                const empName = manageBtn.getAttribute('data-emp-name');
+                if (empId && empName) {
+                    document.getElementById('modalEmployeeName').innerText = empName;
+                    document.getElementById('modalEmployeeId').value = empId;
+                    loadEquipmentToModal(empId);
+
+                    const modalEl = document.getElementById('equipmentModal');
+                    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                }
+            }
+        });
+
+        // Форма додавання техніки через API
+        const addForm = document.getElementById('addEquipmentForm');
+        if (addForm) {
+            addForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const empId = document.getElementById('modalEmployeeId').value;
+                const itemName = document.getElementById('eqItemName').value;
+                const serialNumber = document.getElementById('eqSerialNumber').value;
+                const comment = document.getElementById('eqComment').value;
+
+                const formData = new URLSearchParams();
+                formData.append('employeeId', empId);
+                formData.append('itemName', itemName);
+                formData.append('serialNumber', serialNumber);
+                formData.append('comment', comment);
+
+                fetch('/api/equipment/add', { method: 'POST', body: formData })
+                    .then(res => res.json())
+                    .then(data => {
+                        if(data.status === 'success') {
+                            document.getElementById('eqItemName').value = '';
+                            document.getElementById('eqSerialNumber').value = '';
+                            document.getElementById('eqComment').value = '';
+                            loadEquipmentToModal(empId);
+
+                            // Оновлюємо списки прямо на відкритих картках (якщо вони є)
+                            ['active', 'normal'].forEach(p => {
+                                const el = document.getElementById(`equipment-list-${p}-${empId}`);
+                                if (el) loadEquipmentFromAPI(empId, el);
+                            });
+                        }
+                    });
+            });
+        }
+    });
+
+    // Завантаження техніки з EmployeeRestController
+    function loadEquipmentFromAPI(empId, container) {
+        fetch(`/api/employees/${empId}/equipment`)
+            .then(res => res.json())
+            .then(data => {
+                container.innerHTML = '';
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<li class="list-group-item text-muted small py-1 bg-transparent border-0">Техніка відсутня</li>';
+                    return;
+                }
+                data.forEach(eq => {
+                    const li = document.createElement('li');
+                    li.className = 'list-group-item d-flex justify-content-between align-items-center small py-1 px-2 mb-1 rounded border bg-white';
+                    li.innerHTML = `
+                        <div><strong>${eq.itemName}</strong> <span class="text-muted" style="font-size: 0.75rem;">(${eq.serialNumber})</span></div>
+                        <button class="btn btn-sm text-danger p-0 border-0" onclick="deleteEquipmentDirectly(${eq.id}, ${empId})"><i class="bi bi-trash"></i></button>
+                    `;
+                    container.appendChild(li);
+                });
+            });
+    }
+
+    // Завантаження заявок з EmployeeRestController (Ендпоінт №2)
+    function loadRequestsFromAPI(empId, container, prefix) {
+        fetch(`/api/employees/${empId}/requests`)
+            .then(res => res.json())
+            .then(data => {
+                container.innerHTML = '';
+                if (!data || data.length === 0) {
+                    container.innerHTML = '<span class="text-muted small">Заявки відсутні.</span>';
+                    return;
+                }
+
+                // Сортуємо свіжі догори
+                data.sort((a,b) => b.id - a.id);
+
+                data.forEach(req => {
+                    const card = document.createElement('div');
+                    card.className = 'mb-2 p-2 bg-white rounded border small shadow-sm';
+
+                    let badgeClass = 'badge bg-warning text-dark';
+                    if (req.status === 'ЗАВЕРШЕНО') badgeClass = 'badge bg-success';
+                    if (req.status === 'ВІДХИЛЕНО') badgeClass = 'badge bg-danger';
+                    if (req.status === 'ПОГОДЖЕНО_ОЧІКУЄ_ІТ') badgeClass = 'badge bg-info text-dark';
+
+                    let buttons = '';
+                    // Рендеримо кнопки зміни статусу ТІЛЬКИ для активних працівників
+                    if (prefix === 'active') {
+                        if (req.status === 'НА_РОЗГЛЯДІ_КЕРІВНИКА') {
+                            buttons = `
+                            <div class="text-end mt-1">
+                                <button class="btn btn-xs btn-outline-success py-0" onclick="changeRequestStatus(${req.id}, 'ПОГОДЖЕНО_ОЧІКУЄ_ІТ')">Погодити</button>
+                                <button class="btn btn-xs btn-outline-danger py-0 ms-1" onclick="changeRequestStatus(${req.id}, 'ВІДХИЛЕНО')">Відхилити</button>
+                            </div>`;
+                        } else if (req.status === 'ПОГОДЖЕНО_ОЧІКУЄ_ІТ') {
+                            buttons = `
+                            <div class="text-end mt-1">
+                                <button class="btn btn-xs btn-outline-primary py-0" onclick="changeRequestStatus(${req.id}, 'ЗАВЕРШЕНО')">👷 Видати ресурси</button>
+                            </div>`;
+                        }
+                    }
+
+                    card.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-bold text-dark">${req.requestType}</span>
+                            <span class="${badgeClass}" style="font-size:0.65rem;">${req.status.replace(/_/g, ' ')}</span>
+                        </div>
+                        ${req.description ? `<div class="mt-1 bg-light p-1 rounded" style="font-size:0.75rem;"><strong>Суть:</strong> ${req.description}</div>` : ''}
+                        ${req.comment ? `<div class="text-secondary mt-1" style="font-size:0.7rem;">⚙️ ${req.comment}</div>` : ''}
+                        ${buttons}
+                    `;
+                    container.appendChild(card);
+                });
+            });
+    }
+
+    // Робота з REST-методом №3 (оновлення статусу по кнопці)
+    function changeRequestStatus(requestId, statusName) {
+        fetch(`/api/employees/requests/${requestId}/status?status=${encodeURIComponent(statusName)}`, { method: 'POST' })
+            .then(res => res.json())
+            .then(() => {
+                location.reload(); // Перезавантажуємо для оновлення кадрових мап сервера
+            });
+    }
+
+    function loadEquipmentToModal(empId) {
+        const tbody = document.getElementById('modalEquipmentTableBody');
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Завантаження...</td></tr>';
+        fetch(`/api/employees/${empId}/equipment`)
+            .then(res => res.json())
+            .then(data => {
+                tbody.innerHTML = '';
+                if(!data || data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Немає техніки</td></tr>';
+                    return;
+                }
+                data.forEach(eq => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td><strong>${eq.itemName}</strong></td>
+                        <td><code>${eq.serialNumber}</code></td>
+                        <td>${eq.comment || '-'}</td>
+                        <td class="text-end"><button class="btn btn-sm btn-link text-danger py-0" onclick="deleteEquipmentDirectly(${eq.id}, ${empId}, true)">Списати</button></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            });
+    }
+
+    function deleteEquipmentDirectly(eqId, empId, isFromModal = false) {
+        if (confirm("Видалити цей ресурс?")) {
+            fetch(`/api/equipment/delete/${eqId}`, { method: 'POST' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        if (isFromModal) loadEquipmentToModal(empId);
+                        ['active', 'normal'].forEach(p => {
+                            const el = document.getElementById(`equipment-list-${p}-${empId}`);
+                            if (el) loadEquipmentFromAPI(empId, el);
+                        });
+                    }
+                });
+        }
+    }
+</script>
 </body>
 </html>

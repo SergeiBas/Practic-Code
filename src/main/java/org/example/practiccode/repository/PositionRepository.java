@@ -6,5 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface PositionRepository extends JpaRepository<Position, Long> {
-    // Тут автоматично вже є методи save(), findAll(), findById(), deleteById()
+    java.util.Optional<Position> findByTitleIgnoreCase(String title);
 }

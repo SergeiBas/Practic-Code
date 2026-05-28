@@ -3,13 +3,13 @@ package org.example.practiccode.model;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "employees")
 @Data
-@NoArgsConstructor
 @AllArgsConstructor
 public class Employee {
 
@@ -32,16 +32,26 @@ public class Employee {
 
     private String phone;
 
-    // Зв'язок: Багато працівників можуть мати однакову посаду
     @ManyToOne
-    @JoinColumn(name = "position_id") // Назва колонки зв'язку в таблиці БД
+    @JoinColumn(name = "position_id")
     private Position position;
 
-    // Зв'язок: Багато працівників можуть працювати в одному підрозділі
     @ManyToOne
     @JoinColumn(name = "department_id")
     private Department department;
 
     @Column(name = "hire_date")
-    private LocalDate hireDate; // LocalDate ідеально підходить для типу DATE в БД
+    private LocalDate hireDate;
+
+    @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Equipment> equipments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "employee", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<HRRequest> hrRequests = new ArrayList<>();
+
+    // Залишаємо твій ручний конструктор, він заміняє @NoArgsConstructor
+    public Employee() {
+        this.equipments = new ArrayList<>();
+        this.hrRequests = new ArrayList<>();
+    }
 }
