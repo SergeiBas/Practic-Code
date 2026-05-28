@@ -40,23 +40,21 @@ public class EmployeeController {
         this.hrRequestRepository = hrRequestRepository;
     }
 
-    // 1. ГОЛОВНА СТОРІНКА (Групування за відділами + Звільнені)
+    // 1. ГОЛОВНА СТОРІНКА (Групування за відділами + Звільнені по ID 99)
     @GetMapping({"/", "/employees"})
     public String viewHomePage(Model model) {
         List<Employee> allEmployees = employeeService.getAllEmployees();
 
-        // 1. Працівники, які потребують уваги (мають активні процеси) - залишаємо як було
+        // 1. Працівники, які потребують уваги (мають активні процеси) - залишаємо без змін
         List<Employee> activeEmployees = allEmployees.stream()
                 .filter(emp -> emp.getHrRequests() != null && emp.getHrRequests().stream()
                         .anyMatch(req -> "НА_РОЗГЛЯДІ_КЕРІВНИКА".equals(req.getStatus())
                                 || "ПОГОДЖЕНО_ОЧІКУЄ_ІТ".equals(req.getStatus())))
                 .toList();
 
-        // 2. Фільтруємо ЗВІЛЬНЕНИХ працівників (сортування за прізвищем)
-        // Примітка: якщо у твоїй системі звільнення визначається інакше (наприклад, полем в базі), підкоригуй цей фільтр
+        // 2. ФІЛЬТР ЗВІЛЬНЕНИХ: Тепер це ті, у кого department_id == 99
         List<Employee> firedEmployees = allEmployees.stream()
-                .filter(emp -> emp.getHrRequests() != null && emp.getHrRequests().stream()
-                        .anyMatch(req -> "Звільнення".equalsIgnoreCase(req.getRequestType()) && "ЗАВЕРШЕНО".equals(req.getStatus())))
+                .filter(emp -> emp.getDepartment() != null && emp.getDepartment().getId() == 99)
                 .sorted((e1, e2) -> {
                     String name1 = e1.getLastName() != null ? e1.getLastName() : "";
                     String name2 = e2.getLastName() != null ? e2.getLastName() : "";
@@ -64,24 +62,24 @@ public class EmployeeController {
                 })
                 .toList();
 
-        // 3. Всі інші діючі працівники (В штаті), які НЕ в активних процесах і НЕ звільнені
+        // 3. Діючі працівники (В штаті): НЕ потребують уваги і НЕ в 99-му відділі
         List<Employee> inStaffEmployees = allEmployees.stream()
                 .filter(emp -> !activeEmployees.contains(emp) && !firedEmployees.contains(emp))
                 .toList();
 
         // 4. ГРУПУВАННЯ ЗА ВІДДІЛАМИ для списку "В штаті"
-        // Map<Назва_Відділу, Список_Працівників>
         java.util.Map<String, List<Employee>> employeesByDepartment = inStaffEmployees.stream()
                 .collect(java.util.stream.Collectors.groupingBy(
                         emp -> emp.getDepartment() != null ? emp.getDepartment().getName() : "Без відділу"
                 ));
 
         model.addAttribute("activeEmployees", activeEmployees);
-        model.addAttribute("employeesByDepartment", employeesByDepartment); // Нова мапа для акордеонів відділів
-        model.addAttribute("firedEmployees", firedEmployees); // Новий список звільнених
+        model.addAttribute("employeesByDepartment", employeesByDepartment);
+        model.addAttribute("firedEmployees", firedEmployees); // Передаємо відфільтрований за ID 99 список в архів
 
         return "index";
     }
+
     // 2. Відкриття форми (Тепер повертає новий add-request)
     @GetMapping("/employees/add-form")
     public String showAddEmployeeForm(Model model) {
@@ -181,8 +179,8 @@ public class EmployeeController {
                 // Формуємо опис змін
                 StringBuilder changeLog = new StringBuilder();
                 if (isDeptChanged || isPosChanged) {
-                    changeLog.append(String.format("Кадрове переведення. Новий відділ: '%s' (був '%s'). Нова посада: '%s' (була '%s'). ",
-                            departmentName.trim(), currentDept, positionTitle.trim(), currentPos));
+                    changeLog.append(String.format("Кадрове переведення. Старий відділ був: '%s', тепер Новий відділ: '%s'. Стара посада була: '%s', тепер Нова посада: '%s'",
+                            currentDept, departmentName.trim(), currentPos, positionTitle.trim()));
                 } else {
                     changeLog.append("Дані профілю оновлено. Надіслано запит на додаткове IT-забезпечення. ");
                 }
@@ -193,7 +191,8 @@ public class EmployeeController {
                 editRequest.setDescription(changeLog.toString());
 
                 // Формуємо коментар для IT
-                editRequest.setComment("Потребує послуг IT: Так" + (itComment != null && !itComment.isBlank() ? ". Завдання: " + itComment.trim() : ""));
+                editRequest.setComment("Потребує послуг IT: " + (needsItServices ? "Так" : "Ні")
+                        + (needsItServices && itComment != null && !itComment.isBlank() ? ". Завдання: " + itComment.trim() : ""));
 
                 // ЗБЕРІГАЄМО ЗАЯВКУ В БАЗУ
                 hrRequestRepository.save(editRequest);
@@ -243,13 +242,74 @@ public class EmployeeController {
         return "redirect:/";
     }
 
-    // 5. ЗМІНА СТАТУСУ ЗАЯВКИ (Класичний метод синхронного оновлення)
+    // 5. ЗМІНА СТАТУСУ ЗАЯВКИ (Оновлено: автоматичне кадрове переведення та звільнення)
     @PostMapping("/requests/{id}/update-status")
     public String updateRequestStatus(@PathVariable("id") Long requestId, @RequestParam("status") String status) {
         HRRequest request = hrRequestRepository.findById(requestId)
                 .orElseThrow(() -> new IllegalArgumentException("Невідомий ID заявки: " + requestId));
 
-        request.setStatus(status);
+        String finalStatus = status;
+
+        // Якщо заявку повністю погоджено / завершено керівником або IT
+        if ("ЗАВЕРШЕНО".equals(status)) {
+            Employee employee = request.getEmployee();
+
+            if (employee != null) {
+                String type = request.getRequestType();
+
+                // СЦЕНАРІЙ 1: ЗВІЛЬНЕННЯ (переводимо в 99-й відділ)
+                if ("Звільнення".equalsIgnoreCase(type)) {
+                    Department archiveDept = departmentRepository.findById(99L).orElse(null);
+                    if (archiveDept != null) {
+                        employee.setDepartment(archiveDept);
+                        employeeService.saveEmployee(employee);
+                    }
+                }
+
+                // СЦЕНАРІЙ 2: КАДРОВЕ ПЕРЕВЕДЕННЯ (Зміна посади / відділу)
+                else if ("Зміна посади / відділу".equalsIgnoreCase(type)) {
+                    // Парсимо текст опису заявки, щоб дізнатися, які нові назви туди ввів кадровик.
+                    // Текст має вигляд: "... Новий відділ: 'IT' ... Нова посада: 'Python Developer' ..."
+                    String description = request.getDescription();
+
+                    if (description != null) {
+                        try {
+                            // Витягуємо назву відділу між одинарними дужками '...'
+                            String deptName = description.split("Новий відділ: '")[1].split("'")[0].trim();
+                            // Витягуємо назву посади між одинарними дужками '...'
+                            String posTitle = description.split("Нова посада: '")[1].split("'")[0].trim();
+
+                            // 1. Шукаємо або створюємо новий відділ
+                            Department department = departmentRepository.findByNameIgnoreCase(deptName)
+                                    .orElseGet(() -> {
+                                        Department d = new Department();
+                                        d.setName(deptName);
+                                        return departmentRepository.save(d);
+                                    });
+
+                            // 2. Шукаємо або створюємо нову посаду
+                            Position position = positionRepository.findByTitleIgnoreCase(posTitle)
+                                    .orElseGet(() -> {
+                                        Position p = new Position();
+                                        p.setTitle(posTitle);
+                                        return positionRepository.save(p);
+                                    });
+
+                            // 3. Присвоюємо оновлені об'єкти працівнику та зберігаємо в базу
+                            employee.setDepartment(department);
+                            employee.setPosition(position);
+                            employeeService.saveEmployee(employee);
+
+                        } catch (Exception e) {
+                            System.err.println("Помилка автоматичного парсингу даних для кадрового переведення: " + e.getMessage());
+                            // Якщо парсинг впаде через зміну формату тексту, додаток не ляже, а просто запише помилку
+                        }
+                    }
+                }
+            }
+        }
+
+        request.setStatus(finalStatus);
         hrRequestRepository.save(request);
 
         return "redirect:/";

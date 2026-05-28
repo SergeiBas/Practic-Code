@@ -1,0 +1,145 @@
+/* ==========================================================================
+   1. БАЗОВІ НАЛАШТУВАННЯ ТА СВІТЛА ТЕМА (ЗА ЗАМОВЧУВАННЯМ)
+   ========================================================================== */
+body, html { height: 100%; margin: 0; transition: background-color 0.3s, color 0.3s; }
+body:not([data-bs-theme="dark"]) { background-color: #f8f9fa; color: #212529; }
+
+/* Стилі сітки головної сторінки index.html */
+.sidebar { height: 100vh; position: fixed; top: 0; left: 0; z-index: 100; background-color: #212529; color: white; display: flex; flex-direction: column; justify-content: space-between; }
+.main-content { margin-left: 25%; padding: 20px; width: 75%; }
+@media (max-width: 992px) { .sidebar { position: relative; height: auto; width: 100%; } .main-content { margin-left: 0; width: 100%; } }
+.hr-line { border-top: 3px solid #6c757d; margin: 30px 0; opacity: 1; }
+.btn-xs { padding: 1px 5px; font-size: 0.75rem; border-radius: 3px; }
+
+/* Стилі сторінки створення заявки add-request.html */
+body { padding-top: 5px; }
+body:not([data-bs-theme="dark"]) .form-card { background: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: 1px solid #dee2e6; }
+.form-card { max-width: 650px; margin: 50px auto; padding: 30px; border-radius: 8px; }
+.hidden-block { display: none; }
+.search-select { max-height: 180px; overflow-y: auto; }
+
+/* ==========================================================================
+   2. ТОЧКОВА ТЕМНА ТЕМА (БЕЗ КОНФЛІКТІВ МІЖ СТОРІНКАМИ)
+   ========================================================================== */
+[data-bs-theme="dark"] body { background-color: #121212 !important; color: #e0e0e0 !important; }
+
+/* --- СПІЛЬНІ ЕЛЕМЕНТИ ФОРМ ТА ІНПУТІВ --- */
+[data-bs-theme="dark"] .form-control,
+[data-bs-theme="dark"] .form-select,
+[data-bs-theme="dark"] .form-check-input {
+    background-color: #252525 !important;
+    color: #ffffff !important;
+    border-color: #444444 !important;
+}
+[data-bs-theme="dark"] .form-control:focus,
+[data-bs-theme="dark"] .form-select:focus {
+    border-color: #0d6efd !important;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25) !important;
+}
+[data-bs-theme="dark"] .form-control::placeholder { color: #777777 !important; }
+
+/* --- СТИЛІ СТОРІНКИ ЗАЯВОК (add-request.html) --- */
+[data-bs-theme="dark"] .form-card {
+    background-color: #1e1e1e !important;
+    border-color: #2d2d2d !important;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important;
+}
+[data-bs-theme="dark"] .form-card label,
+[data-bs-theme="dark"] .form-card .text-dark,
+[data-bs-theme="dark"] .form-card .text-secondary,
+[data-bs-theme="dark"] .form-card .text-muted {
+    color: #e0e0e0 !important;
+}
+[data-bs-theme="dark"] .form-card .bg-light {
+    background-color: #252525 !important;
+    border-color: #3a3a3a !important;
+    color: #ffffff !important;
+}
+
+/* --- СТИЛІ ГОЛОВНОЇ СТОРІНКИ (index.html) --- */
+
+/* Контейнери відділів (Акордеони) */
+[data-bs-theme="dark"] .accordion-item {
+    background-color: #1e1e1e !important;
+    border-color: #2d2d2d !important;
+}
+[data-bs-theme="dark"] .accordion-button {
+    background-color: #252525 !important;
+    color: #ffffff !important;
+}
+/* Стан, коли акордеон відкритий */
+[data-bs-theme="dark"] .accordion-button:not(.collapsed) {
+    background-color: #2d2d2d !important;
+    color: #0d6efd !important;
+    box-shadow: inset 0 -1px 0 rgba(255,255,255,.125) !important;
+}
+[data-bs-theme="dark"] .accordion-body {
+    background-color: #1e1e1e !important;
+    color: #e0e0e0 !important;
+}
+
+/* Картка конкретного працівника (Юрченко Анна тощо) всередині акордеона */
+[data-bs-theme="dark"] .accordion-body .card {
+    background-color: #181818 !important;
+    border-color: #2d2d2d !important;
+}
+[data-bs-theme="dark"] .accordion-body .card-header {
+    background-color: #252525 !important;
+    color: #ffffff !important;
+    border-bottom: 1px solid #2d2d2d !important;
+}
+
+/* Виправляємо тексти в секції "Інформація" та "Техніка працівника" всередині акордеона */
+[data-bs-theme="dark"] .accordion-body .card-body,
+[data-bs-theme="dark"] .accordion-body .card-body p,
+[data-bs-theme="dark"] .accordion-body .card-body span {
+    color: #ffffff !important;
+}
+[data-bs-theme="dark"] .accordion-body .card-body .text-muted,
+[data-bs-theme="dark"] .accordion-body .card-body strong {
+    color: #b0b0b0 !important; /* Робимо підписи типу "Посада:" легко читаємими */
+}
+
+/* Інпути в списку техніки всередині картки */
+[data-bs-theme="dark"] .accordion-body .card-body .form-control {
+    background-color: #202020 !important;
+    color: #ffffff !important;
+}
+
+/* ВНУТРІШНІ ПЛАШКИ (наприклад, "Кадрові заявки", блоки у модалках техніки) */
+/* Повертаємо їм білий фон у світлій темі та правильний темний у темній, щоб не зливалися */
+[data-bs-theme="dark"] .main-content .bg-white,
+[data-bs-theme="dark"] .main-content .bg-light,
+[data-bs-theme="dark"] .modal-body .bg-light {
+    background-color: #222222 !important;
+    color: #ffffff !important;
+    border: 1px solid #333333 !important;
+}
+[data-bs-theme="dark"] .main-content .bg-white *,
+[data-bs-theme="dark"] .main-content .bg-light * {
+    color: #ffffff !important;
+}
+/* Сірий підпис для внутрішнього блоку заявок (наприклад, "Керівник:") */
+[data-bs-theme="dark"] .main-content .bg-white strong,
+[data-bs-theme="dark"] .main-content .bg-light strong {
+    color: #aaaaaa !important;
+}
+
+/* --- МОДАЛЬНІ ВІКНА ТА ТАБЛИЦІ КЕРУВАННЯ ТЕХНІКОЮ --- */
+[data-bs-theme="dark"] .modal-content {
+    background-color: #1e1e1e !important;
+    color: #ffffff !important;
+    border: 1px solid #333333 !important;
+}
+[data-bs-theme="dark"] .modal-body .table {
+    color: #ffffff !important;
+    border-color: #333333 !important;
+}
+[data-bs-theme="dark"] .modal-body .table th {
+    background-color: #252525 !important;
+    color: #ffffff !important;
+}
+[data-bs-theme="dark"] .modal-body .table td {
+    background-color: #1e1e1e !important;
+    color: #ffffff !important;
+}

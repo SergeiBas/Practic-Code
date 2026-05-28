@@ -5,11 +5,8 @@
     <title>Створення кадрової заявки</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <style>
-        body { background-color: #f8f9fa; padding-top: 50px; }
-        .form-card { max-width: 650px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .hidden-block { display: none; }
-    </style>
+
+    <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
 
@@ -35,18 +32,30 @@
                 </select>
             </div>
 
+            <div id="searchEmployeeBlock" class="hidden-block mb-3">
+                <label for="employeeSearchInput" class="form-label small fw-bold text-secondary">
+                    <i class="bi bi-search"></i> Швидкий пошук працівника (введіть Прізвище або Ім'я):
+                </label>
+                <input type="text" id="employeeSearchInput" class="form-control form-control-sm mb-2" placeholder="Почніть писати для фільтрації списку...">
+            </div>
+
             <div id="existingEmployeeBlock" class="hidden-block mb-3">
-                <label class="form-label small fw-bold">Оберіть працівника із бази</label>
-                <select name="existingEmployeeId" class="form-select">
-                    <option value="" disabled selected>Хто подає заявку? (Виберіть зі списку)</option>
-                    <option th:each="emp : ${allEmployees}" th:value="${emp.id}">
-                        [[${emp.lastName}]] [[${emp.firstName}]] — [[${emp.position != null ? emp.position.title : 'Без посади'}]]
-                    </option>
+                <label class="form-label small fw-bold">Оберіть працівника із бази:</label>
+                <select name="existingEmployeeId" id="employeeSelect" class="form-select search-select" size="5">
+                    <option value="" disabled selected class="text-muted">-- Оберіть співробітника нижче --</option>
+
+                    <th:block th:each="emp : ${allEmployees}">
+                        <option th:if="${emp.department != null ? emp.department.id != 99 : true}"
+                                th:value="${emp.id}"
+                                th:text="${emp.lastName} + ' ' + ${emp.firstName} + ' — ' + ${emp.position != null ? emp.position.title : 'Без посади'}">
+                        </option>
+                    </th:block>
                 </select>
+                <div class="form-text text-success small" id="searchResultCount"></div>
             </div>
 
             <div id="newEmployeeBlock" class="hidden-block">
-                <h5 class="text-success mb-3 border-bottom pb-1"><i class="bi bi-person-badge"></i> Анкетні дані нового співробітника</h5>
+                <h5 class="text-success mb-3 border-bottom pb-1"><i class="bi bi-person-badge"></i> Анкетні дані співробітника</h5>
 
                 <div class="row g-2 mb-3">
                     <div class="col-md-4">
@@ -90,12 +99,12 @@
 
                 <div class="mb-3">
                     <label class="form-label small fw-bold text-dark">📝 Загальний коментар / Пояснення до заявки</label>
-                    <textarea name="description" class="form-control" rows="2" placeholder="Наприклад: Прошу надати відпустку з 01.06 по 14.06 у зв'язку з сімейними обставинами..."></textarea>
+                    <textarea name="description" class="form-control" rows="2" placeholder="Наприклад: Прошу надати відпустку з 01.06 по 14.06..."></textarea>
                 </div>
 
                 <div class="p-3 bg-light rounded border mb-4">
                     <div class="form-check form-switch mb-2">
-                        <input class="form-check-input" type="checkbox" role="switch" id="itServicesSwitch" name="needsItServices" value="true">
+                        <input class="form-check-input" type="checkbox" role="switch" id="itServicesSwitch" name="needsItServices">
                         <label class="form-check-label fw-bold small text-primary" for="itServicesSwitch">Потребує послуг IT-спеціаліста</label>
                     </div>
                     <div class="mb-0">
@@ -111,89 +120,7 @@
     </div>
 </div>
 
-<script>
-    document.getElementById('requestTypeSelect').addEventListener('change', function() {
-        handleFormView();
-    });
-
-    // Додаємо тригер і на зміну вибраного працівника (для автозаповнення)
-    document.querySelector('select[name="existingEmployeeId"]').addEventListener('change', function() {
-        if (document.getElementById('requestTypeSelect').value === 'EDIT_EMPLOYEE') {
-            fillEmployeeDataForEdit(this.value);
-        }
-    });
-
-    function handleFormView() {
-        const value = document.getElementById('requestTypeSelect').value;
-        const existingBlock = document.getElementById('existingEmployeeBlock');
-        const newBlock = document.getElementById('newEmployeeBlock');
-        const commonBlock = document.getElementById('commonDetailsBlock');
-        const h5Title = newBlock.querySelector('h5');
-
-        const inputs = ['lastNameInput', 'firstNameInput', 'emailInput', 'phoneInput', 'deptInput', 'posInput'];
-
-        if (value === 'NEW_EMPLOYEE') {
-            newBlock.classList.remove('hidden-block');
-            existingBlock.classList.add('hidden-block');
-            commonBlock.classList.remove('hidden-block');
-            h5Title.innerHTML = '<i class="bi bi-person-badge"></i> Анкетні дані нового співробітника';
-
-            // Очищаємо поля
-            inputs.forEach(id => {
-                const input = document.getElementById(id);
-                input.value = '';
-                input.setAttribute('required', 'required');
-            });
-            document.getElementById('itServicesSwitch').checked = true;
-
-        } else if (value === 'EDIT_EMPLOYEE') {
-            // Для редагування потрібен і вибір працівника, і анкета з його даними!
-            existingBlock.classList.remove('hidden-block');
-            newBlock.classList.remove('hidden-block');
-            commonBlock.classList.remove('hidden-block');
-            h5Title.innerHTML = '<i class="bi bi-pencil-square"></i> Нові (оновлені) дані працівника';
-
-            // Поля обов'язкові, бо ми надсилаємо фінальний стан картки
-            inputs.forEach(id => document.getElementById(id).setAttribute('required', 'required'));
-            document.getElementById('itServicesSwitch').checked = false;
-
-            // Якщо працівник уже був вибраний до цього — підтягуємо дані
-            const selectedEmpId = document.querySelector('select[name="existingEmployeeId"]').value;
-            if (selectedEmpId) fillEmployeeDataForEdit(selectedEmpId);
-
-        } else {
-            // Звичайна заявка (відпустка, лікарняний)
-            newBlock.classList.add('hidden-block');
-            existingBlock.classList.remove('hidden-block');
-            commonBlock.classList.remove('hidden-block');
-
-            inputs.forEach(id => document.getElementById(id).removeAttribute('required'));
-            document.getElementById('itServicesSwitch').checked = false;
-        }
-    }
-
-    // Функція автозаповнення полів через API
-    function fillEmployeeDataForEdit(empId) {
-        if(!empId) return;
-
-        // Використовуємо твій існуючий API (або загальний ендпоінт) для отримання інфи про індивідуального працівника
-        fetch('/api/employees/' + empId)
-            .then(res => {
-                if(!res.ok) throw new Error("Працівника не знайдено");
-                return res.json();
-            })
-            .then(emp => {
-                document.getElementById('lastNameInput').value = emp.lastName || '';
-                document.getElementById('firstNameInput').value = emp.firstName || '';
-                document.getElementById('emailInput').value = emp.email || '';
-                document.getElementById('phoneInput').value = emp.phone || '';
-                document.getElementById('deptInput').value = emp.department ? emp.department.name : '';
-                document.getElementById('posInput').value = emp.position ? emp.position.title : '';
-            })
-            .catch(err => console.error("Помилка автозаповнення: ", err));
-    }
-</script>
-
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/request.js}"></script>
 </body>
 </html>

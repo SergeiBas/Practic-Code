@@ -1,10 +1,44 @@
 document.addEventListener("DOMContentLoaded", function() {
-    console.log("REST API та Модальні вікна синхронізовані.");
+    console.log("REST API, Модальні вікна та Перемикач теми синхронізовані.");
 
-    // Глобальний клік-слухач
+    const htmlElement = document.documentElement;
+    const themeIcon = document.getElementById('themeIcon');
+
+    // ==========================================
+    // ІНІЦІАЛІЗАЦІЯ ТЕМИ САЙТУ
+    // ==========================================
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    setTheme(savedTheme);
+
+    function setTheme(theme) {
+        htmlElement.setAttribute('data-bs-theme', theme);
+        localStorage.setItem('theme', theme);
+
+        if (themeIcon) {
+            if (theme === 'dark') {
+                themeIcon.className = 'bi bi-sun-fill text-info';
+            } else {
+                themeIcon.className = 'bi bi-moon-fill text-warning';
+            }
+        }
+    }
+
+    // ==========================================
+    // ГЛОБАЛЬНИЙ КЛІК-СЛУХАЧ (Делегування подій)
+    // ==========================================
     document.addEventListener('click', function(e) {
         try {
-            // 1. Клік на розгортання картки працівника
+            // 1. КЛІК НА ПЕРЕМИКАЧ ТЕМИ В МОДАЛЦІ НАЛАШТУВАНЬ
+            const themeBtn = e.target.closest('#themeToggleItem');
+            if (themeBtn) {
+                e.preventDefault();
+                const currentTheme = htmlElement.getAttribute('data-bs-theme');
+                const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+                setTheme(newTheme);
+                return; // Виходимо, обробка завершена
+            }
+
+            // 2. Клік на розгортання картки працівника
             const toggleBtn = e.target.closest('.employee-toggle-btn');
             if (toggleBtn) {
                 const empId = toggleBtn.getAttribute('data-emp-id');
@@ -20,7 +54,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 return;
             }
 
-            // 2. Клік на керування технікою
+            // 3. Клік на керування технікою
             const manageBtn = e.target.closest('.manage-eq-btn');
             if (manageBtn) {
                 const empId = manageBtn.getAttribute('data-emp-id');
@@ -74,6 +108,10 @@ document.addEventListener("DOMContentLoaded", function() {
     }
 });
 
+// ==========================================
+// ГЛОБАЛЬНІ ФУНКЦІЇ ДЛЯ API
+// ==========================================
+
 function loadEquipmentFromAPI(empId, container) {
     fetch(`/api/employees/${empId}/equipment`)
         .then(res => res.json())
@@ -95,7 +133,6 @@ function loadEquipmentFromAPI(empId, container) {
         }).catch(e => console.error(e));
 }
 
-// Завантаження заявок та логіка кнопки "Показати всі"
 function loadRequestsFromAPI(empId, container, prefix, buttonEl) {
     fetch(`/api/employees/${empId}/requests`)
         .then(res => res.json())
@@ -106,59 +143,69 @@ function loadRequestsFromAPI(empId, container, prefix, buttonEl) {
                 return;
             }
 
-            // Сортуємо: нові зверху
             data.sort((a,b) => b.id - a.id);
-
-            // Відображаємо максимум 3 штуки
             const itemsToDisplay = data.slice(0, 3);
 
             itemsToDisplay.forEach(req => {
                 const card = document.createElement('div');
                 card.className = 'mb-2 p-2 bg-white rounded border small shadow-sm';
+                card.id = `request-card-${req.id}`;
 
                 let badgeClass = 'badge bg-warning text-dark';
                 if (req.status === 'ЗАВЕРШЕНО') badgeClass = 'badge bg-success';
                 if (req.status === 'ВІДХИЛЕНО') badgeClass = 'badge bg-danger';
                 if (req.status === 'ПОГОДЖЕНО_ОЧІКУЄ_ІТ') badgeClass = 'badge bg-info text-dark';
 
+                const safeDescription = (req.description || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
                 let buttons = '';
                 if (prefix === 'active') {
                     if (req.status === 'ONLINE' || req.status === 'НА_РОЗГЛЯДІ_КЕРІВНИКА') {
                         buttons = `
-                            <div class="text-end mt-1">
-                                <button class="btn btn-xs btn-outline-success py-0" onclick="changeRequestStatus(${req.id}, 'ПОГОДЖЕНО_ОЧІКУЄ_ІТ')">Погодити</button>
-                                <button class="btn btn-xs btn-outline-danger py-0 ms-1" onclick="changeRequestStatus(${req.id}, 'ВІДХИЛЕНО')">Відхилити</button>
-                            </div>`;
+                        <div class="text-end mt-2" id="action-buttons-group-${req.id}">
+                            <button class="btn btn-xs btn-outline-success py-0" onclick="changeRequestStatus(${req.id}, 'ПОГОДЖЕНО_ОЧІКУЄ_ІТ')">Погодити</button>
+                            <button class="btn btn-xs btn-outline-primary py-0 ms-1" onclick="enableInlineEditing(${req.id}, '${safeDescription}')">
+                                <i class="bi bi-pencil-square"></i> Внести правки
+                            </button>
+                            <button class="btn btn-xs btn-outline-danger py-0 ms-1" onclick="changeRequestStatus(${req.id}, 'ВІДХИЛЕНО')">
+                                Відхилити
+                            </button>
+                        </div>`;
                     } else if (req.status === 'ПОГОДЖЕНО_ОЧІКУЄ_ІТ') {
                         buttons = `
-                            <div class="text-end mt-1">
-                                <button class="btn btn-xs btn-outline-primary py-0" onclick="changeRequestStatus(${req.id}, 'ЗАВЕРШЕНО')">👷 Видати ресурси</button>
-                            </div>`;
+                        <div class="text-end mt-2">
+                            <button class="btn btn-xs btn-outline-primary py-0" onclick="changeRequestStatus(${req.id}, 'ЗАВЕРШЕНО')">👷 Видати ресурси</button>
+                        </div>`;
                     }
                 }
 
                 card.innerHTML = `
-                        <div class="d-flex justify-content-between align-items-center">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
                             <span class="fw-bold text-dark">${req.requestType}</span>
                             <span class="${badgeClass}" style="font-size:0.65rem;">${req.status.replace(/_/g, ' ')}</span>
                         </div>
-                        ${req.description ? `<div class="mt-1 bg-light p-1 rounded" style="font-size:0.75rem;"><strong>Суть:</strong> ${req.description}</div>` : ''}
-                        ${req.comment ? `<div class="text-secondary mt-1" style="font-size:0.7rem;">⚙️ ${req.comment}</div>` : ''}
+                        <div id="description-container-${req.id}">
+                            ${req.description ? (
+                    req.description.startsWith("Керівник:")
+                        ? `<div class="mt-1 bg-light p-1 rounded text-dark" style="font-size:0.75rem;"><strong>Керівник:</strong> ${req.description.replace("Керівник:", "").trim()}</div>`
+                        : `<div class="mt-1 bg-light p-1 rounded text-dark" style="font-size:0.75rem;">${req.description}</div>`
+                ) : ''}
+                        </div>
+                        
+                        ${req.comment ? `<div class="text-secondary mt-1 border-top pt-1" style="font-size:0.7rem;">⚙️ ${req.comment}</div>` : ''}
                         ${buttons}
                     `;
                 container.appendChild(card);
             });
 
-            // ЯКЩО ЗАЯВОК БІЛЬШЕ НІЖ 3 — ПОВЕРТАЄМО КНОПКУ ІСТОРІЇ
             if (data.length > 3) {
                 const empName = buttonEl ? buttonEl.innerText.split('\n')[0] : `Працівник #${empId}`;
                 const historyBtn = document.createElement('button');
                 historyBtn.className = 'btn btn-sm btn-link text-primary p-0 mt-2 fw-bold text-decoration-none d-block';
                 historyBtn.innerHTML = `<i class="bi bi-clock-history"></i> 📜 Вся історія заявок (${data.length})`;
 
-                // Обробка кліку на кнопку історії
                 historyBtn.addEventListener('click', function(evt) {
-                    evt.stopPropagation(); // щоб акордеон випадково не закрився
+                    evt.stopPropagation();
                     openHistoryModal(empName, data);
                 });
                 container.appendChild(historyBtn);
@@ -167,7 +214,41 @@ function loadRequestsFromAPI(empId, container, prefix, buttonEl) {
         }).catch(e => console.error(e));
 }
 
-// Вікно історії
+function enableInlineEditing(requestId, currentText) {
+    const descContainer = document.getElementById(`description-container-${requestId}`);
+    const buttonsGroup = document.getElementById(`action-buttons-group-${requestId}`);
+
+    if (!descContainer || !buttonsGroup) return;
+
+    descContainer.innerHTML = `
+            <div class="mt-2">
+                <label class="form-label text-primary fw-bold mb-1" style="font-size: 0.7rem;">Коригування опису для IT:</label>
+                <textarea id="textarea-amend-${requestId}" class="form-control form-control-sm" rows="2" style="font-size: 0.75rem;">${currentText}</textarea>
+            </div>
+        `;
+
+    buttonsGroup.innerHTML = `
+            <button class="btn btn-xs btn-success py-0" onclick="submitAmendedRequest(${requestId})">
+                <i class="bi bi-check-lg"></i> Зберегти й Погодити
+            </button>
+            <button class="btn btn-xs btn-outline-secondary py-0 ms-1" onclick="location.reload()">
+                Скасувати
+            </button>
+        `;
+}
+
+function submitAmendedRequest(requestId) {
+    const textarea = document.getElementById(`textarea-amend-${requestId}`);
+    if (!textarea) return;
+
+    const formData = new URLSearchParams();
+    formData.append('newDescription', textarea.value);
+
+    fetch(`/api/employees/requests/${requestId}/amend`, { method: 'POST', body: formData })
+        .then(() => { location.reload(); })
+        .catch(err => console.error(err));
+}
+
 function openHistoryModal(employeeName, allRequests) {
     document.getElementById('modalHistoryEmployeeName').innerText = employeeName;
     const tbody = document.getElementById('modalHistoryTableBody');
@@ -180,10 +261,15 @@ function openHistoryModal(employeeName, allRequests) {
         if (req.status === 'ВІДХИЛЕНО') badgeClass = 'badge bg-danger';
         if (req.status === 'ПОГОДЖЕНО_ОЧІКУЄ_ІТ') badgeClass = 'badge bg-info text-dark';
 
+        let displayText = req.description || req.comment || '—';
+        if (displayText.startsWith("Керівник:")) {
+            displayText = `<strong>Керівник:</strong> ${displayText.replace("Керівник:", "").trim()}`;
+        }
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
                 <td><strong>${req.requestType}</strong></td>
-                <td class="small">${req.description || req.comment || '—'}</td>
+                <td class="small">${displayText}</td>
                 <td><span class="${badgeClass}">${req.status.replace(/_/g, ' ')}</span></td>
             `;
         tbody.appendChild(tr);
