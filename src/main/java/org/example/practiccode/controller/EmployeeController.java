@@ -355,4 +355,9 @@ public class EmployeeController {
 
         return "{\"status\":\"success\"}";
     }
+
+    @GetMapping("/login")
+    public String loginPage() {
+        return "login"; // Повертає шаблон login.html з папки templates
+    }
 }

@@ -1,5 +1,9 @@
+// Зчитуємо роль користувача з мета-тегу (налаштованого у index.html) на самому початку
+const metaRole = document.querySelector('meta[name="_user_role"]');
+const userRole = metaRole ? metaRole.getAttribute('content') : '';
+
 document.addEventListener("DOMContentLoaded", function() {
-    console.log("REST API, Модальні вікна та Перемикач теми синхронізовані.");
+    console.log("REST API, Модальні вікна та Перемикач теми синхронізовані. Роль користувача:", userRole);
 
     const htmlElement = document.documentElement;
     const themeIcon = document.getElementById('themeIcon');
@@ -35,7 +39,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 const currentTheme = htmlElement.getAttribute('data-bs-theme');
                 const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
                 setTheme(newTheme);
-                return; // Виходимо, обробка завершена
+                return;
             }
 
             // 2. Клік на розгортання картки працівника
@@ -54,9 +58,13 @@ document.addEventListener("DOMContentLoaded", function() {
                 return;
             }
 
-            // 3. Клік на керування технікою
+            // 3. Клік на керування технікою (Доступно ТІЛЬКИ для ROLE_IT)
             const manageBtn = e.target.closest('.manage-eq-btn');
             if (manageBtn) {
+                if (userRole !== 'ROLE_IT') {
+                    alert("У вас немає прав для керування технікою!");
+                    return;
+                }
                 const empId = manageBtn.getAttribute('data-emp-id');
                 const empName = manageBtn.getAttribute('data-emp-name');
                 if (empId && empName) {
@@ -73,11 +81,13 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
-    // Додавання техніки через AJAX
+    // Додавання техніки через AJAX (З виправленим захистом CSRF)
     const addForm = document.getElementById('addEquipmentForm');
     if (addForm) {
         addForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            if (userRole !== 'ROLE_IT') return;
+
             const empId = document.getElementById('modalEmployeeId').value;
             const itemName = document.getElementById('eqItemName').value;
             const serialNumber = document.getElementById('eqSerialNumber').value;
@@ -89,7 +99,23 @@ document.addEventListener("DOMContentLoaded", function() {
             formData.append('serialNumber', serialNumber);
             formData.append('comment', comment);
 
-            fetch('/api/equipment/add', { method: 'POST', body: formData })
+            // --- ЗЧИТУЄМО CSRF ТОКЕНИ ДЛЯ ЗАХИСТУ ---
+            const token = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+            const header = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+
+            const headers = {
+                // Вказуємо тип контенту, який очікує форма URLSearchParams
+                'Content-Type': 'application/x-www-form-urlencoded'
+            };
+            if (token && header) {
+                headers[header] = token; // Додаємо токен безпеки в заголовок
+            }
+
+            fetch('/api/equipment/add', {
+                method: 'POST',
+                headers: headers, // Передаємо заголовки разом із токеном
+                body: formData
+            })
                 .then(res => res.json())
                 .then(data => {
                     if(data.status === 'success') {
@@ -102,7 +128,13 @@ document.addEventListener("DOMContentLoaded", function() {
                             const el = document.getElementById(`equipment-list-${p}-${empId}`);
                             if (el) loadEquipmentFromAPI(empId, el);
                         });
+                    } else {
+                        alert("Помилка бази даних при додаванні техніки.");
                     }
+                })
+                .catch(err => {
+                    console.error("Помилка відправки форми:", err);
+                    alert("Сервер заблокував запит. Перевірте авторизацію.");
                 });
         });
     }
@@ -124,9 +156,15 @@ function loadEquipmentFromAPI(empId, container) {
             data.forEach(eq => {
                 const li = document.createElement('li');
                 li.className = 'list-group-item d-flex justify-content-between align-items-center small py-1 px-2 mb-1 rounded border bg-white';
+
+                // Кнопку видалення (смітник) малюємо ТІЛЬКИ для IT-спеціаліста
+                const deleteButton = (userRole === 'ROLE_IT')
+                    ? `<button class="btn btn-sm text-danger p-0 border-0" onclick="deleteEquipmentDirectly(${eq.id}, ${empId})"><i class="bi bi-trash"></i></button>`
+                    : '';
+
                 li.innerHTML = `
                         <div><strong>${eq.itemName}</strong> <span class="text-muted" style="font-size: 0.75rem;">(${eq.serialNumber})</span></div>
-                        <button class="btn btn-sm text-danger p-0 border-0" onclick="deleteEquipmentDirectly(${eq.id}, ${empId})"><i class="bi bi-trash"></i></button>
+                        ${deleteButton}
                     `;
                 container.appendChild(li);
             });
@@ -160,7 +198,8 @@ function loadRequestsFromAPI(empId, container, prefix, buttonEl) {
 
                 let buttons = '';
                 if (prefix === 'active') {
-                    if (req.status === 'ONLINE' || req.status === 'НА_РОЗГЛЯДІ_КЕРІВНИКА') {
+                    // --- КНОПКИ ДЛЯ КЕРІВНИКА (ROLE_MANAGER) ---
+                    if ((req.status === 'ONLINE' || req.status === 'НА_РОЗГЛЯДІ_КЕРІВНИКА') && userRole === 'ROLE_MANAGER') {
                         buttons = `
                         <div class="text-end mt-2" id="action-buttons-group-${req.id}">
                             <button class="btn btn-xs btn-outline-success py-0" onclick="changeRequestStatus(${req.id}, 'ПОГОДЖЕНО_ОЧІКУЄ_ІТ')">Погодити</button>
@@ -171,7 +210,8 @@ function loadRequestsFromAPI(empId, container, prefix, buttonEl) {
                                 Відхилити
                             </button>
                         </div>`;
-                    } else if (req.status === 'ПОГОДЖЕНО_ОЧІКУЄ_ІТ') {
+                        // --- КНОПКА ДЛЯ IT-СПЕЦІАЛІСТА (ROLE_IT) ---
+                    } else if (req.status === 'ПОГОДЖЕНО_ОЧІКУЄ_ІТ' && userRole === 'ROLE_IT') {
                         buttons = `
                         <div class="text-end mt-2">
                             <button class="btn btn-xs btn-outline-primary py-0" onclick="changeRequestStatus(${req.id}, 'ЗАВЕРШЕНО')">👷 Видати ресурси</button>
@@ -215,6 +255,7 @@ function loadRequestsFromAPI(empId, container, prefix, buttonEl) {
 }
 
 function enableInlineEditing(requestId, currentText) {
+    if (userRole !== 'ROLE_MANAGER') return; // Додатковий захист
     const descContainer = document.getElementById(`description-container-${requestId}`);
     const buttonsGroup = document.getElementById(`action-buttons-group-${requestId}`);
 
@@ -238,6 +279,7 @@ function enableInlineEditing(requestId, currentText) {
 }
 
 function submitAmendedRequest(requestId) {
+    if (userRole !== 'ROLE_MANAGER') return;
     const textarea = document.getElementById(`textarea-amend-${requestId}`);
     if (!textarea) return;
 
@@ -280,11 +322,37 @@ function openHistoryModal(employeeName, allRequests) {
 }
 
 function changeRequestStatus(requestId, statusName) {
-    fetch(`/api/employees/requests/${requestId}/status?status=${encodeURIComponent(statusName)}`, { method: 'POST' })
-        .then(() => { location.reload(); });
+    if (userRole === 'ROLE_HR') {
+        alert("У вас немає прав для зміни статусу заявок.");
+        return;
+    }
+
+    // Зчитуємо CSRF токени з мета-тегів сторінки
+    const token = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+    const header = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+
+    const headers = {};
+    if (token && header) {
+        headers[header] = token; // Додаємо захищений токен у заголовок запиту
+    }
+
+    fetch(`/api/employees/requests/${requestId}/status?status=${encodeURIComponent(statusName)}`, {
+        method: 'POST',
+        headers: headers // Передаємо заголовки безпеки
+    })
+        .then(res => {
+            if (res.ok) {
+                location.reload();
+            } else {
+                console.error("Сервер повернув помилку при зміні статусу:", res.status);
+                alert("Не вдалося змінити статус. Можливо, сесія застаріла або недостатньо прав.");
+            }
+        })
+        .catch(err => console.error("Помилка мережі:", err));
 }
 
 function loadEquipmentToModal(empId) {
+    if (userRole !== 'ROLE_IT') return;
     const tbody = document.getElementById('modalEquipmentTableBody');
     tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Завантаження...</td></tr>';
     fetch(`/api/employees/${empId}/equipment`)
@@ -309,8 +377,24 @@ function loadEquipmentToModal(empId) {
 }
 
 function deleteEquipmentDirectly(eqId, empId, isFromModal = false) {
+    if (userRole !== 'ROLE_IT') {
+        alert("У вас немає прав на видалення техніки!");
+        return;
+    }
     if (confirm("Видалити цей ресурс?")) {
-        fetch(`/api/equipment/delete/${eqId}`, { method: 'POST' })
+        // Зчитуємо CSRF для видалення
+        const token = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+        const header = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
+
+        const headers = {};
+        if (token && header) {
+            headers[header] = token;
+        }
+
+        fetch(`/api/equipment/delete/${eqId}`, {
+            method: 'POST',
+            headers: headers // Додаємо захист сюди
+        })
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success') {
@@ -320,6 +404,7 @@ function deleteEquipmentDirectly(eqId, empId, isFromModal = false) {
                         if (el) loadEquipmentFromAPI(empId, el);
                     });
                 }
-            });
+            })
+            .catch(err => console.error("Помилка видалення:", err));
     }
 }

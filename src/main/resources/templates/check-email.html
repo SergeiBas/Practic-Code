@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <title>Перевірка запрошення - PortalCRM</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+</head>
+<body class="bg-light d-flex align-items-center justify-content-center" style="min-height: 100vh;">
+
+<div class="card shadow p-4 border-0 rounded-4" style="max-width: 450px; width: 100%;">
+    <div class="text-center mb-4">
+        <h3 class="fw-bold text-success"><i class="bi bi-shield-lock-fill"></i> Реєстрація</h3>
+        <p class="text-muted small">Введіть ваш робочий Email для перевірки доступу</p>
+    </div>
+
+    <div th:if="${error}" class="alert alert-danger small py-2" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-1"></i> [[${error}]]
+    </div>
+
+    <form th:action="@{/register/check-email}" method="POST">
+        <div class="mb-3">
+            <label for="email" class="form-label small fw-bold text-secondary">Робочий Email</label>
+            <div class="input-group">
+                <span class="input-group-text bg-white text-muted"><i class="bi bi-envelope-fill"></i></span>
+                <input type="email" id="email" name="email" class="form-control text-lowercase" placeholder="name@company.com" required>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-success w-100 fw-bold py-2 shadow-sm">
+            Перевірити доступ <i class="bi bi-arrow-right-short"></i>
+        </button>
+    </form>
+
+    <div class="text-center mt-3 border-top pt-2">
+        <a href="/login" class="text-decoration-none small text-muted"><i class="bi bi-arrow-left"></i> Повернутись до входу</a>
+    </div>
+</div>
+
+</body>
+</html>

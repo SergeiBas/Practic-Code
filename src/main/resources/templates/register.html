@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <title>Створення акаунту - PortalCRM</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+</head>
+<body class="bg-light d-flex align-items-center justify-content-center" style="min-height: 100vh; padding: 20px 0;">
+
+<div class="card shadow p-4 border-0 rounded-4" style="max-width: 500px; width: 100%;">
+  <div class="text-center mb-3">
+    <h3 class="fw-bold text-primary"><i class="bi bi-person-badge-fill"></i> Профіль користувача</h3>
+    <p class="text-muted small mb-1">Для пошти: <strong class="text-dark" th:text="${email}">email@company.com</strong></p>
+    <span class="badge bg-info text-dark">Роль в системі: [[${roleName.replace('ROLE_', '')}]]</span>
+  </div>
+
+  <form th:action="@{/register/complete}" method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="email" th:value="${email}">
+    <input type="hidden" name="roleName" th:value="${roleName}">
+
+    <div class="row g-2 mb-3">
+      <div class="col-6">
+        <label class="form-label small fw-bold text-secondary">Ім'я</label>
+        <input type="text" name="firstName" class="form-control form-control-sm" required>
+      </div>
+      <div class="col-6">
+        <label class="form-label small fw-bold text-secondary">Прізвище</label>
+        <input type="text" name="lastName" class="form-control form-control-sm" required>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label small fw-bold text-secondary">Придумайте пароль</label>
+      <input type="password" name="password" class="form-control form-control-sm" minlength="4" required>
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label small fw-bold text-secondary">Завантажити фото профілю (аватар)</label>
+      <input type="file" name="avatarFile" class="form-control form-control-sm" accept="image/*">
+      <div class="form-text" style="font-size: 0.75rem;">Підтримуються формати JPEG, PNG.</div>
+    </div>
+
+    <button type="submit" class="btn btn-primary w-100 fw-bold py-2 shadow-sm">
+      <i class="bi bi-check-circle-fill"></i> Завершити реєстрацію
+    </button>
+  </form>
+</div>
+
+</body>
+</html>
