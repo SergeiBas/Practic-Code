@@ -81,7 +81,7 @@
                                 <div class="col-md-4 border-end">
                                     <h6>💻 Техніка працівника:</h6>
                                     <ul class="list-group list-group-flush mb-2" th:id="'equipment-list-active-' + ${emp.id}">
-                                        <li class="list-group-item text-muted small py-1 bg-transparent border-0">Завантаження з API...</li>
+                                        <li class="list-group-item text-muted small py-1 bg-transparent border-0">Завантаження...</li>
                                     </ul>
                                     <button class="btn btn-sm btn-outline-primary mt-2 manage-eq-btn" th:data-emp-id="${emp.id}" th:data-emp-name="${emp.firstName} + ' ' + ${emp.lastName}">
                                         <i class="bi bi-laptop"></i> Керувати технікою
@@ -90,7 +90,7 @@
                                 <div class="col-md-4">
                                     <h6>📋 Кадрові заявки:</h6>
                                     <div th:id="'requests-list-active-' + ${emp.id}">
-                                        <span class="text-muted small">Завантаження з API...</span>
+                                        <span class="text-muted small">Завантаження...</span>
                                     </div>
                                 </div>
                             </div>
@@ -144,7 +144,7 @@
                                                     <div class="col-md-4 border-end">
                                                         <h6>💻 Техніка працівника:</h6>
                                                         <ul class="list-group list-group-flush mb-2" th:id="'equipment-list-normal-' + ${emp.id}">
-                                                            <li class="list-group-item text-muted small py-1 bg-transparent border-0">Завантаження з API...</li>
+                                                            <li class="list-group-item text-muted small py-1 bg-transparent border-0">Завантаження...</li>
                                                         </ul>
                                                         <button class="btn btn-sm btn-outline-primary mt-2 manage-eq-btn" th:data-emp-id="${emp.id}" th:data-emp-name="${emp.firstName} + ' ' + ${emp.lastName}">
                                                             <i class="bi bi-laptop"></i> Керувати технікою
@@ -153,7 +153,7 @@
                                                     <div class="col-md-4">
                                                         <h6>📋 Кадрові заявки:</h6>
                                                         <div th:id="'requests-list-normal-' + ${emp.id}">
-                                                            <span class="text-muted small">Завантаження з API...</span>
+                                                            <span class="text-muted small">Завантаження...</span>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -217,7 +217,24 @@
     </div>
 </div>
 
-<div class="modal fade" id="equipmentModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="settingsModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-dark text-white py-2">
+                <h5 class="modal-title"><i class="bi bi-gear-fill me-2"></i> Налаштування</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-modal="modal" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0">
+                <div class="list-group list-group-flush">
+                    <button class="list-group-item list-group-item-action py-3"><i class="bi bi-person-gear me-2"></i> Редагування акаунту</button>
+                    <button class="list-group-item list-group-item-action text-danger py-3 border-bottom-0"><i class="bi bi-box-arrow-right me-2"></i> Вийти з акаунту</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="equipmentModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header bg-dark text-white">
@@ -262,207 +279,36 @@
     </div>
 </div>
 
+<div class="modal fade" id="historyModal" tabindex="-1" aria-hidden="true" style="z-index: 1060;">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-secondary text-white">
+                <h5 class="modal-title"><i class="bi bi-journal-text"></i> Вся історія заявок: <span id="modalHistoryEmployeeName" class="text-info"></span></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped table-hover align-middle border">
+                        <thead class="table-dark">
+                        <tr>
+                            <th>Тип заявки</th>
+                            <th>Суть / Опис змін</th>
+                            <th>Статус</th>
+                        </tr>
+                        </thead>
+                        <tbody id="modalHistoryTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Закрити</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/js/bootstrap.bundle.min.js"></script>
 
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        console.log("REST API Інтеграція підключена.");
-
-        // Глобальний клік-лісенер, що не боїться перерендерингу структур
-        document.addEventListener('click', function(e) {
-
-            // 1. Клік на кнопку розгортання картки працівника
-            const toggleBtn = e.target.closest('.employee-toggle-btn');
-            if (toggleBtn) {
-                const empId = toggleBtn.getAttribute('data-emp-id');
-                const prefix = toggleBtn.getAttribute('data-prefix'); // active, normal або fired
-
-                if (empId && prefix) {
-                    const eqContainer = document.getElementById(`equipment-list-${prefix}-${empId}`);
-                    const reqContainer = document.getElementById(`requests-list-${prefix}-${empId}`);
-
-                    if (eqContainer) loadEquipmentFromAPI(empId, eqContainer);
-                    if (reqContainer) loadRequestsFromAPI(empId, reqContainer, prefix);
-                }
-                return;
-            }
-
-            // 2. Клік на керування технікою (відкриття модалки)
-            const manageBtn = e.target.closest('.manage-eq-btn');
-            if (manageBtn) {
-                const empId = manageBtn.getAttribute('data-emp-id');
-                const empName = manageBtn.getAttribute('data-emp-name');
-                if (empId && empName) {
-                    document.getElementById('modalEmployeeName').innerText = empName;
-                    document.getElementById('modalEmployeeId').value = empId;
-                    loadEquipmentToModal(empId);
-
-                    const modalEl = document.getElementById('equipmentModal');
-                    bootstrap.Modal.getOrCreateInstance(modalEl).show();
-                }
-            }
-        });
-
-        // Форма додавання техніки через API
-        const addForm = document.getElementById('addEquipmentForm');
-        if (addForm) {
-            addForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                const empId = document.getElementById('modalEmployeeId').value;
-                const itemName = document.getElementById('eqItemName').value;
-                const serialNumber = document.getElementById('eqSerialNumber').value;
-                const comment = document.getElementById('eqComment').value;
-
-                const formData = new URLSearchParams();
-                formData.append('employeeId', empId);
-                formData.append('itemName', itemName);
-                formData.append('serialNumber', serialNumber);
-                formData.append('comment', comment);
-
-                fetch('/api/equipment/add', { method: 'POST', body: formData })
-                    .then(res => res.json())
-                    .then(data => {
-                        if(data.status === 'success') {
-                            document.getElementById('eqItemName').value = '';
-                            document.getElementById('eqSerialNumber').value = '';
-                            document.getElementById('eqComment').value = '';
-                            loadEquipmentToModal(empId);
-
-                            // Оновлюємо списки прямо на відкритих картках (якщо вони є)
-                            ['active', 'normal'].forEach(p => {
-                                const el = document.getElementById(`equipment-list-${p}-${empId}`);
-                                if (el) loadEquipmentFromAPI(empId, el);
-                            });
-                        }
-                    });
-            });
-        }
-    });
-
-    // Завантаження техніки з EmployeeRestController
-    function loadEquipmentFromAPI(empId, container) {
-        fetch(`/api/employees/${empId}/equipment`)
-            .then(res => res.json())
-            .then(data => {
-                container.innerHTML = '';
-                if (!data || data.length === 0) {
-                    container.innerHTML = '<li class="list-group-item text-muted small py-1 bg-transparent border-0">Техніка відсутня</li>';
-                    return;
-                }
-                data.forEach(eq => {
-                    const li = document.createElement('li');
-                    li.className = 'list-group-item d-flex justify-content-between align-items-center small py-1 px-2 mb-1 rounded border bg-white';
-                    li.innerHTML = `
-                        <div><strong>${eq.itemName}</strong> <span class="text-muted" style="font-size: 0.75rem;">(${eq.serialNumber})</span></div>
-                        <button class="btn btn-sm text-danger p-0 border-0" onclick="deleteEquipmentDirectly(${eq.id}, ${empId})"><i class="bi bi-trash"></i></button>
-                    `;
-                    container.appendChild(li);
-                });
-            });
-    }
-
-    // Завантаження заявок з EmployeeRestController (Ендпоінт №2)
-    function loadRequestsFromAPI(empId, container, prefix) {
-        fetch(`/api/employees/${empId}/requests`)
-            .then(res => res.json())
-            .then(data => {
-                container.innerHTML = '';
-                if (!data || data.length === 0) {
-                    container.innerHTML = '<span class="text-muted small">Заявки відсутні.</span>';
-                    return;
-                }
-
-                // Сортуємо свіжі догори
-                data.sort((a,b) => b.id - a.id);
-
-                data.forEach(req => {
-                    const card = document.createElement('div');
-                    card.className = 'mb-2 p-2 bg-white rounded border small shadow-sm';
-
-                    let badgeClass = 'badge bg-warning text-dark';
-                    if (req.status === 'ЗАВЕРШЕНО') badgeClass = 'badge bg-success';
-                    if (req.status === 'ВІДХИЛЕНО') badgeClass = 'badge bg-danger';
-                    if (req.status === 'ПОГОДЖЕНО_ОЧІКУЄ_ІТ') badgeClass = 'badge bg-info text-dark';
-
-                    let buttons = '';
-                    // Рендеримо кнопки зміни статусу ТІЛЬКИ для активних працівників
-                    if (prefix === 'active') {
-                        if (req.status === 'НА_РОЗГЛЯДІ_КЕРІВНИКА') {
-                            buttons = `
-                            <div class="text-end mt-1">
-                                <button class="btn btn-xs btn-outline-success py-0" onclick="changeRequestStatus(${req.id}, 'ПОГОДЖЕНО_ОЧІКУЄ_ІТ')">Погодити</button>
-                                <button class="btn btn-xs btn-outline-danger py-0 ms-1" onclick="changeRequestStatus(${req.id}, 'ВІДХИЛЕНО')">Відхилити</button>
-                            </div>`;
-                        } else if (req.status === 'ПОГОДЖЕНО_ОЧІКУЄ_ІТ') {
-                            buttons = `
-                            <div class="text-end mt-1">
-                                <button class="btn btn-xs btn-outline-primary py-0" onclick="changeRequestStatus(${req.id}, 'ЗАВЕРШЕНО')">👷 Видати ресурси</button>
-                            </div>`;
-                        }
-                    }
-
-                    card.innerHTML = `
-                        <div class="d-flex justify-content-between align-items-center">
-                            <span class="fw-bold text-dark">${req.requestType}</span>
-                            <span class="${badgeClass}" style="font-size:0.65rem;">${req.status.replace(/_/g, ' ')}</span>
-                        </div>
-                        ${req.description ? `<div class="mt-1 bg-light p-1 rounded" style="font-size:0.75rem;"><strong>Суть:</strong> ${req.description}</div>` : ''}
-                        ${req.comment ? `<div class="text-secondary mt-1" style="font-size:0.7rem;">⚙️ ${req.comment}</div>` : ''}
-                        ${buttons}
-                    `;
-                    container.appendChild(card);
-                });
-            });
-    }
-
-    // Робота з REST-методом №3 (оновлення статусу по кнопці)
-    function changeRequestStatus(requestId, statusName) {
-        fetch(`/api/employees/requests/${requestId}/status?status=${encodeURIComponent(statusName)}`, { method: 'POST' })
-            .then(res => res.json())
-            .then(() => {
-                location.reload(); // Перезавантажуємо для оновлення кадрових мап сервера
-            });
-    }
-
-    function loadEquipmentToModal(empId) {
-        const tbody = document.getElementById('modalEquipmentTableBody');
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Завантаження...</td></tr>';
-        fetch(`/api/employees/${empId}/equipment`)
-            .then(res => res.json())
-            .then(data => {
-                tbody.innerHTML = '';
-                if(!data || data.length === 0) {
-                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">Немає техніки</td></tr>';
-                    return;
-                }
-                data.forEach(eq => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td><strong>${eq.itemName}</strong></td>
-                        <td><code>${eq.serialNumber}</code></td>
-                        <td>${eq.comment || '-'}</td>
-                        <td class="text-end"><button class="btn btn-sm btn-link text-danger py-0" onclick="deleteEquipmentDirectly(${eq.id}, ${empId}, true)">Списати</button></td>
-                    `;
-                    tbody.appendChild(tr);
-                });
-            });
-    }
-
-    function deleteEquipmentDirectly(eqId, empId, isFromModal = false) {
-        if (confirm("Видалити цей ресурс?")) {
-            fetch(`/api/equipment/delete/${eqId}`, { method: 'POST' })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        if (isFromModal) loadEquipmentToModal(empId);
-                        ['active', 'normal'].forEach(p => {
-                            const el = document.getElementById(`equipment-list-${p}-${empId}`);
-                            if (el) loadEquipmentFromAPI(empId, el);
-                        });
-                    }
-                });
-        }
-    }
-</script>
+<script src="/js/employee-management.js"></script>
 </body>
 </html>
