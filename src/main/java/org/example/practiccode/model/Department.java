@@ -19,7 +19,4 @@ public class Department {
 
     @Column(nullable = false)
     private String name; // Назва підрозділу (наприклад: "IT", "HR")
-
-    // Поле manager_id з чернетки поки що опустимо,
-    // щоб не ускладнювати, додамо його, коли створимо таблицю Users
 }

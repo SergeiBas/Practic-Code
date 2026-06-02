@@ -66,15 +66,96 @@
         </a>
       </div>
 
+      <div class="text-end mb-3">
+        <a href="#" class="text-decoration-none small text-primary" data-bs-toggle="modal" data-bs-target="#forgotPasswordModal">Забули пароль?</a>
+      </div>
+
     </form>
   </div>
 </div>
 
+<div class="modal fade" id="forgotPasswordModal" tabindex="-1" aria-labelledby="forgotPasswordModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title fw-bold" id="forgotPasswordModalLabel">🔑 Відновлення пароля</h5>
+        <button type="button" class="btn-close" data-bs-content="modal" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small">Введіть ваш робочий корпоративний email. Система згенерує новий тимчасовий пароль та надішле його вам на пошту.</p>
+        <form id="forgotPasswordForm">
+          <div class="mb-3">
+            <label for="recoveryEmail" class="form-label small fw-bold">Ваш Email:</label>
+            <input type="email" id="recoveryEmail" class="form-control" placeholder="name@company.com" required>
+          </div>
+          <div id="recoveryMessage" class="alert small d-none"></div>
+          <div class="text-end">
+            <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Скасувати</button>
+            <button type="submit" id="btnSubmitRecovery" class="btn btn-sm btn-primary">Надіслати пароль</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 <script>
   // Автоматична синхронізація теми на сторінці логіну
   document.addEventListener("DOMContentLoaded", function() {
     const savedTheme = localStorage.getItem('theme') || 'light';
     document.documentElement.setAttribute('data-bs-theme', savedTheme);
+  });
+  document.getElementById('forgotPasswordForm')?.addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const email = document.getElementById('recoveryEmail').value;
+    const msgDiv = document.getElementById('recoveryMessage');
+    const btnSubmit = document.getElementById('btnSubmitRecovery');
+
+    btnSubmit.disabled = true;
+    btnSubmit.innerText = "Обробка...";
+    msgDiv.className = "alert small alert-info";
+    msgDiv.innerText = "Звернення до сервера...";
+    msgDiv.classList.remove('d-none');
+
+    const params = new URLSearchParams();
+    params.append('email', email);
+
+    // Робимо максимально чистий POST запит
+    fetch('/api/auth/forgot-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params
+    })
+            .then(res => {
+              // Якщо Spring знову підсуне HTML сторінку замість JSON, ми це побачимо в консолі
+              const contentType = res.headers.get("content-type");
+              if (contentType && contentType.includes("text/html")) {
+                throw new Error("Сервер повернув HTML-сторінку замість відповіді. Перевірте SecurityConfig!");
+              }
+              if (!res.ok) {
+                throw new Error("Помилка сервера. Код: " + res.status);
+              }
+              return res.json();
+            })
+            .then(data => {
+              if (data.status === 'success') {
+                msgDiv.className = "alert small alert-success";
+                msgDiv.innerText = "Успішно! Тимчасовий пароль створено. Перевірте консоль або пошту.";
+                document.getElementById('recoveryEmail').value = '';
+              } else {
+                msgDiv.className = "alert small alert-danger";
+                msgDiv.innerText = data.message || "Помилка зміни пароля.";
+              }
+            })
+            .catch(err => {
+              console.error("Деталі:", err);
+              msgDiv.className = "alert small alert-danger";
+              msgDiv.innerText = err.message;
+            })
+            .finally(() => {
+              btnSubmit.disabled = false;
+              btnSubmit.innerText = "Надіслати пароль";
+            });
   });
 </script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

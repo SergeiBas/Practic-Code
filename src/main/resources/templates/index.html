@@ -19,18 +19,21 @@
 
     <div class="col-12 col-md-3 sidebar p-3 shadow">
         <div>
-            <h4 class="text-center mb-4 text-success border-bottom pb-2"><i class="bi bi-building-gear"></i> PortalCRM</h4>
-            <div class="text-center my-4">
-                <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200"
-                     class="rounded-circle img-thumbnail mb-3 shadow-sm" alt="Аватар" style="width: 110px; height: 110px; object-fit: cover;">
-                <h5 class="mt-2" sec:authentication="name">Ім'я Користувача</h5>
-                <span class="badge bg-primary">
-                    <span sec:authorize="hasRole('HR')">Відділ Кадрів</span>
-                    <span sec:authorize="hasRole('MANAGER')">Керівник</span>
-                    <span sec:authorize="hasRole('IT')">IT-Спеціаліст</span>
-                </span>
+            <h4 class="text-center mb-4 text-success border-bottom pb-2"><i class="bi bi-building-gear"></i>Portal CRM</h4>
+            <div class="user-profile-card p-3 mb-4 text-center border-bottom">
+                <img th:src="${currentUser.avatarPath != null ? currentUser.avatarPath : '/images/default-avatar.png'}"
+                     alt="User Avatar"
+                     class="rounded-3 shadow-sm mb-2"
+                     style="width: 150px; height: 150px; object-fit: cover;">
+
+                <h6 class="fw-bold mb-0" th:text="${currentUser.firstName + ' ' + currentUser.lastName}">Ім'я Прізвище</h6>
+
+                <p class="text-muted small mb-1 user-email-fix" th:text="${currentUser.email}">email@company.com</p>
+
+                <span class="badge bg-primary text-white rounded-pill px-3 py-1 mt-1">
+                <small th:text="${#strings.replace(currentUser.roles[0].name, 'ROLE_', '')}">РОЛЬ</small>
+            </span>
             </div>
-            <hr class="text-secondary">
         </div>
         <div class="mb-2">
             <button class="btn btn-outline-light w-100 text-start" data-bs-toggle="modal" data-bs-target="#settingsModal">
@@ -47,18 +50,17 @@
                     <i class="bi bi-person-plus-fill me-1"></i> Створити нову заявку
                 </a>
             </div>
-            <div class="col-12 col-sm-8">
-                <form method="GET" action="/" class="d-flex justify-content-sm-end">
-                    <div class="input-group" style="max-width: 400px;">
-                        <input type="text" name="searchKeyword" class="form-control" placeholder="Пошук працівника...">
-                        <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i></button>
-                    </div>
-                </form>
-            </div>
         </div>
 
         <div class="mb-4">
-            <h3 class="text-warning fw-bold mb-3"><i class="bi bi-exclamation-triangle-fill"></i> Потребують уваги</h3>
+            <h3 th:if="${#lists.isEmpty(activeEmployees)}" class="text-secondary fw-bold mb-3" style="font-size: 1.4rem;">
+                <i class="bi bi-check-circle-fill text-success"></i> Активних заявок немає
+            </h3>
+
+            <h3 th:unless="${#lists.isEmpty(activeEmployees)}" class="text-warning fw-bold mb-3">
+                <i class="bi bi-exclamation-triangle-fill"></i> Потребують уваги
+            </h3>
+
             <div class="accordion" id="activeAccordion">
                 <div class="accordion-item mb-2 border-warning shadow-sm" th:each="emp : ${activeEmployees}">
                     <h2 class="accordion-header">
@@ -100,7 +102,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="text-muted small p-2" th:if="${#lists.isEmpty(activeEmployees)}">Немає активних процесів.</div>
+                <div class="text-muted small p-2" th:if="${#lists.isEmpty(activeEmployees)}">Усі процеси завершено або погоджено.</div>
             </div>
         </div>
 
@@ -238,8 +240,11 @@
             </div>
             <div class="modal-body p-0">
                 <div class="list-group list-group-flush">
-                    <button class="list-group-item list-group-item-action py-3"><i class="bi bi-person-gear me-2"></i> Редагування акаунту</button>
-
+                    <button type="button"
+                            class="list-group-item list-group-item-action py-3"
+                            onclick="window.location.href='/profile';">
+                        <i class="bi bi-person-gear me-2"></i> Редагування акаунту
+                    </button>
                     <button class="list-group-item list-group-item-action py-3 d-flex align-items-center justify-content-between" type="button" id="themeToggleItem">
                         <span><i class="bi bi-palette me-2"></i> Тема сайту</span>
                         <i id="themeIcon" class="bi bi-moon-fill text-warning"></i>

@@ -11,6 +11,7 @@ import org.example.practiccode.repository.PositionRepository;
 import org.example.practiccode.repository.EquipmentRepository;
 import org.example.practiccode.repository.HRRequestRepository;
 
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -87,7 +88,6 @@ public class EmployeeController {
         return "add-request"; // Перейменували шаблон
     }
 
-    // 3. Оновлений обробник із двома різними коментарями
     @PostMapping("/employees/create-request")
     public String createRequest(@RequestParam String requestType,
                                 @RequestParam(required = false) Long existingEmployeeId,
@@ -100,9 +100,19 @@ public class EmployeeController {
                                 @RequestParam(required = false) String positionTitle,
                                 @RequestParam(required = false) String description,
                                 @RequestParam(defaultValue = "false") boolean needsItServices,
-                                @RequestParam(required = false) String itComment) {
+                                @RequestParam(required = false) String itComment,
+                                Authentication auth) { 
 
         Employee targetEmployee;
+
+        // Визначаємо коротку роль того, хто створює запит (наприклад, [HR] або [MANAGER])
+        String authorRole = "[USER]: ";
+        if (auth != null && auth.isAuthenticated()) {
+            authorRole = auth.getAuthorities().stream()
+                    .findFirst()
+                    .map(a -> "[" + a.getAuthority().replace("ROLE_", "") + "]: ")
+                    .orElse("[USER]: ");
+        }
 
         // ВАРІАНТ 1: Оформлення абсолютно нового працівника
         if ("NEW_EMPLOYEE".equals(requestType)) {
@@ -138,20 +148,17 @@ public class EmployeeController {
         } else if ("EDIT_EMPLOYEE".equals(requestType)) {
             if (existingEmployeeId == null) throw new IllegalArgumentException("Не обрано працівника!");
 
-            // Завантажуємо поточний стан з бази
             Employee currentEmployee = employeeService.getAllEmployees().stream()
                     .filter(e -> e.getId().equals(existingEmployeeId))
                     .findFirst()
                     .orElseThrow(() -> new IllegalArgumentException("Працівника не знайдено"));
 
-            // Перевіряємо чи змінилися СУТТЄВІ поля
             String currentDept = currentEmployee.getDepartment() != null ? currentEmployee.getDepartment().getName() : "";
             String currentPos = currentEmployee.getPosition() != null ? currentEmployee.getPosition().getTitle() : "";
 
             boolean isDeptChanged = !currentDept.equalsIgnoreCase(departmentName.trim());
             boolean isPosChanged = !currentPos.equalsIgnoreCase(positionTitle.trim());
 
-            // Оновлюємо базові несуттєві дані миттєво
             currentEmployee.setFirstName(firstName.trim());
             currentEmployee.setLastName(lastName.trim());
             currentEmployee.setMiddleName(middleName != null ? middleName.trim() : null);
@@ -161,11 +168,9 @@ public class EmployeeController {
             employeeService.saveEmployee(currentEmployee);
             targetEmployee = currentEmployee;
 
-            // 🔥 УМОВА ЗМІНЕНА: Якщо міняється відділ, посада АБО потрібне IT (needsItServices == true)
             if (isDeptChanged || isPosChanged || needsItServices) {
                 HRRequest editRequest = new HRRequest();
 
-                // Якщо міняється посада/відділ — це кадрове переведення, якщо тільки IT — запит на ресурси
                 if (isDeptChanged || isPosChanged) {
                     editRequest.setRequestType("Зміна посади / відділу");
                 } else {
@@ -176,8 +181,8 @@ public class EmployeeController {
                 editRequest.setCreatedDate(LocalDate.now());
                 editRequest.setEmployee(currentEmployee);
 
-                // Формуємо опис змін
-                StringBuilder changeLog = new StringBuilder();
+                // Формуємо лог змін з додаванням ролі автора на початку
+                StringBuilder changeLog = new StringBuilder(authorRole);
                 if (isDeptChanged || isPosChanged) {
                     changeLog.append(String.format("Кадрове переведення. Старий відділ був: '%s', тепер Новий відділ: '%s'. Стара посада була: '%s', тепер Нова посада: '%s'",
                             currentDept, departmentName.trim(), currentPos, positionTitle.trim()));
@@ -186,21 +191,17 @@ public class EmployeeController {
                 }
 
                 if (description != null && !description.isBlank()) {
-                    changeLog.append("Коментар: ").append(description.trim());
+                    changeLog.append("\nКоментар: ").append(description.trim());
                 }
                 editRequest.setDescription(changeLog.toString());
 
-                // Формуємо коментар для IT
                 editRequest.setComment("Потребує послуг IT: " + (needsItServices ? "Так" : "Ні")
                         + (needsItServices && itComment != null && !itComment.isBlank() ? ". Завдання: " + itComment.trim() : ""));
 
-                // ЗБЕРІГАЄМО ЗАЯВКУ В БАЗУ
                 hrRequestRepository.save(editRequest);
-
                 return "redirect:/";
             }
 
-            // Якщо зміни були суто косметичні (тільки номер телефону поміняли), заявку не створюємо, просто повертаємо на головну
             return "redirect:/";
 
             // ВАРІАНТ 3: Звичайні заявки (Відпустки, Лікарняні)
@@ -219,8 +220,11 @@ public class EmployeeController {
         hrRequest.setCreatedDate(LocalDate.now());
         hrRequest.setEmployee(targetEmployee);
 
+        // Додаємо роль на початку звичайного опису
         if (description != null && !description.isBlank()) {
-            hrRequest.setDescription(description.trim());
+            hrRequest.setDescription(authorRole + description.trim());
+        } else {
+            hrRequest.setDescription(authorRole + "Запит без додаткового опису.");
         }
 
         StringBuilder itBuilder = new StringBuilder();

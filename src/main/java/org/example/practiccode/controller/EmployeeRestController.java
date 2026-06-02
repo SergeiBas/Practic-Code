@@ -129,28 +129,38 @@ public class EmployeeRestController {
         return ResponseEntity.ok().body("{\"status\":\"success\"}");
     }
 
-    // 4. МЕТОД ДЛЯ ВНЕСЕННЯ ПРАВОК КЕРІВНИКОМ ТА АВТОМАТИЧНОГО ПОГОДЖЕННЯ
+    // 4. МЕТОД ДЛЯ ВНЕСЕННЯ ПРАВОК КЕРІВНИКОМ (БЕЗ АВТОМАТИЧНОГО ПОГОДЖЕННЯ)
     @PostMapping("/requests/{requestId}/amend")
-    public ResponseEntity<?> amendAndApproveRequest(@PathVariable Long requestId,
-                                                    @RequestParam String newDescription) {
+    public ResponseEntity<?> amendRequest(@PathVariable Long requestId,
+                                          @RequestParam String newDescription) {
 
         HRRequest request = hrRequestRepository.findById(requestId)
                 .orElseThrow(() -> new IllegalArgumentException("Заявку з ID " + requestId + " не знайдено"));
 
-        // Формуємо фінальний текст: додаємо мітку "Керівник: ", якщо її там ще немає
         String cleanText = newDescription.trim();
+        String currentDescription = request.getDescription() != null ? request.getDescription().trim() : "";
         String updatedDescription;
-        if (cleanText.startsWith("Керівник:")) {
-            updatedDescription = cleanText;
+
+        // Якщо керівник дійсно щось написав у порожнє поле
+        if (!cleanText.isEmpty()) {
+            String managerComment = cleanText.startsWith("[MANAGER]:") ? cleanText : "[MANAGER]: " + cleanText;
+
+            // Зшиваємо старий текст з бази та новий коментар через перенос рядка
+            if (!currentDescription.isEmpty()) {
+                updatedDescription = currentDescription + "\n" + managerComment;
+            } else {
+                updatedDescription = managerComment;
+            }
         } else {
-            updatedDescription = "Керівник: " + cleanText;
+            // Якщо поле залишили порожнім, просто додаємо дефолтну мітку погодження, не ламаючи текст
+            if (!currentDescription.isEmpty()) {
+                updatedDescription = currentDescription + "\n" + "[MANAGER]: Погоджено без додаткових коментарів.";
+            } else {
+                updatedDescription = "[MANAGER]: Погоджено без додаткових коментарів.";
+            }
         }
 
         request.setDescription(updatedDescription);
-
-        // Автоматично погоджуємо та відправляємо далі на IT
-        request.setStatus("ПОГОДЖЕНО_ОЧІКУЄ_ІТ");
-
         hrRequestRepository.save(request);
 
         return ResponseEntity.ok().body("{\"status\":\"success\"}");

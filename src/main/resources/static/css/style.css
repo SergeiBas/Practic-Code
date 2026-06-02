@@ -4,7 +4,7 @@
 body, html { height: 100%; margin: 0; transition: background-color 0.3s, color 0.3s; }
 body:not([data-bs-theme="dark"]) { background-color: #f8f9fa; color: #212529; }
 
-/* Стилі сітки головної сторінки index.html */
+/* Твій оригінальний темний сайдбар (ПОВЕРНЕНО) */
 .sidebar { height: 100vh; position: fixed; top: 0; left: 0; z-index: 100; background-color: #212529; color: white; display: flex; flex-direction: column; justify-content: space-between; }
 .main-content { margin-left: 25%; padding: 20px; width: 75%; }
 @media (max-width: 992px) { .sidebar { position: relative; height: auto; width: 100%; } .main-content { margin-left: 0; width: 100%; } }
@@ -17,6 +17,12 @@ body:not([data-bs-theme="dark"]) .form-card { background: white; box-shadow: 0 4
 .form-card { max-width: 650px; margin: 50px auto; padding: 30px; border-radius: 8px; }
 .hidden-block { display: none; }
 .search-select { max-height: 180px; overflow-y: auto; }
+
+/* ТОЧКОВА ПРАВКА: Робимо текст емейла світлішим у світлій темі (не ламаючи сайдбар) */
+body:not([data-bs-theme="dark"]) .sidebar .user-email-fix {
+    color: #ced4da !important; /* Приємний світло-сірий колір, який чітко видно на темному фоні */
+}
+
 
 /* ==========================================================================
    2. ТОЧКОВА ТЕМНА ТЕМА (БЕЗ КОНФЛІКТІВ МІЖ СТОРІНКАМИ)
@@ -97,7 +103,7 @@ body:not([data-bs-theme="dark"]) .form-card { background: white; box-shadow: 0 4
 }
 [data-bs-theme="dark"] .accordion-body .card-body .text-muted,
 [data-bs-theme="dark"] .accordion-body .card-body strong {
-    color: #b0b0b0 !important; /* Робимо підписи типу "Посада:" легко читаємими */
+    color: #b0b0b0 !important;
 }
 
 /* Інпути в списку техніки всередині картки */
@@ -107,7 +113,6 @@ body:not([data-bs-theme="dark"]) .form-card { background: white; box-shadow: 0 4
 }
 
 /* ВНУТРІШНІ ПЛАШКИ (наприклад, "Кадрові заявки", блоки у модалках техніки) */
-/* Повертаємо їм білий фон у світлій темі та правильний темний у темній, щоб не зливалися */
 [data-bs-theme="dark"] .main-content .bg-white,
 [data-bs-theme="dark"] .main-content .bg-light,
 [data-bs-theme="dark"] .modal-body .bg-light {
@@ -119,7 +124,6 @@ body:not([data-bs-theme="dark"]) .form-card { background: white; box-shadow: 0 4
 [data-bs-theme="dark"] .main-content .bg-light * {
     color: #ffffff !important;
 }
-/* Сірий підпис для внутрішнього блоку заявок (наприклад, "Керівник:") */
 [data-bs-theme="dark"] .main-content .bg-white strong,
 [data-bs-theme="dark"] .main-content .bg-light strong {
     color: #aaaaaa !important;
@@ -142,4 +146,8 @@ body:not([data-bs-theme="dark"]) .form-card { background: white; box-shadow: 0 4
 [data-bs-theme="dark"] .modal-body .table td {
     background-color: #1e1e1e !important;
     color: #ffffff !important;
+}
+.text-pre-wrap {
+    white-space: pre-wrap !important;
+    word-break: break-word;
 }

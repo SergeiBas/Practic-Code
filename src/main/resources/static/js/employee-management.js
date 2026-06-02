@@ -2,6 +2,35 @@
 const metaRole = document.querySelector('meta[name="_user_role"]');
 const userRole = metaRole ? metaRole.getAttribute('content') : '';
 
+// ==========================================
+// ГЛОБАЛЬНІ ДОПОМІЖНІ ФУНКЦІЇ
+// ==========================================
+function formatDate(dateInput) {
+    if (!dateInput) return '—';
+
+    // Якщо Spring Boot повернув дату у вигляді масиву [yyyy, mm, dd]
+    if (Array.isArray(dateInput)) {
+        const year = dateInput[0];
+        const month = String(dateInput[1]).padStart(2, '0');
+        const day = String(dateInput[2]).padStart(2, '0');
+        return `${day}.${month}.${year}`;
+    }
+
+    // Якщо прийшов звичайний string типу "2026-06-02"
+    try {
+        const date = new Date(dateInput);
+        if (!isNaN(date.getTime())) {
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            return `${day}.${month}.${date.getFullYear()}`;
+        }
+    } catch (e) {
+        console.error("Помилка форматування дати:", e);
+    }
+
+    return dateInput;
+}
+
 document.addEventListener("DOMContentLoaded", function() {
     console.log("REST API, Модальні вікна та Перемикач теми синхронізовані. Роль користувача:", userRole);
 
@@ -104,16 +133,15 @@ document.addEventListener("DOMContentLoaded", function() {
             const header = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
 
             const headers = {
-                // Вказуємо тип контенту, який очікує форма URLSearchParams
                 'Content-Type': 'application/x-www-form-urlencoded'
             };
             if (token && header) {
-                headers[header] = token; // Додаємо токен безпеки в заголовок
+                headers[header] = token;
             }
 
             fetch('/api/equipment/add', {
                 method: 'POST',
-                headers: headers, // Передаємо заголовки разом із токеном
+                headers: headers,
                 body: formData
             })
                 .then(res => res.json())
@@ -157,7 +185,6 @@ function loadEquipmentFromAPI(empId, container) {
                 const li = document.createElement('li');
                 li.className = 'list-group-item d-flex justify-content-between align-items-center small py-1 px-2 mb-1 rounded border bg-white';
 
-                // Кнопку видалення (смітник) малюємо ТІЛЬКИ для IT-спеціаліста
                 const deleteButton = (userRole === 'ROLE_IT')
                     ? `<button class="btn btn-sm text-danger p-0 border-0" onclick="deleteEquipmentDirectly(${eq.id}, ${empId})"><i class="bi bi-trash"></i></button>`
                     : '';
@@ -173,7 +200,10 @@ function loadEquipmentFromAPI(empId, container) {
 
 function loadRequestsFromAPI(empId, container, prefix, buttonEl) {
     fetch(`/api/employees/${empId}/requests`)
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) throw new Error("Помилка сервера");
+            return res.json();
+        })
         .then(data => {
             container.innerHTML = '';
             if (!data || data.length === 0) {
@@ -198,7 +228,6 @@ function loadRequestsFromAPI(empId, container, prefix, buttonEl) {
 
                 let buttons = '';
                 if (prefix === 'active') {
-                    // --- КНОПКИ ДЛЯ КЕРІВНИКА (ROLE_MANAGER) ---
                     if ((req.status === 'ONLINE' || req.status === 'НА_РОЗГЛЯДІ_КЕРІВНИКА') && userRole === 'ROLE_MANAGER') {
                         buttons = `
                         <div class="text-end mt-2" id="action-buttons-group-${req.id}">
@@ -210,7 +239,6 @@ function loadRequestsFromAPI(empId, container, prefix, buttonEl) {
                                 Відхилити
                             </button>
                         </div>`;
-                        // --- КНОПКА ДЛЯ IT-СПЕЦІАЛІСТА (ROLE_IT) ---
                     } else if (req.status === 'ПОГОДЖЕНО_ОЧІКУЄ_ІТ' && userRole === 'ROLE_IT') {
                         buttons = `
                         <div class="text-end mt-2">
@@ -219,22 +247,26 @@ function loadRequestsFromAPI(empId, container, prefix, buttonEl) {
                     }
                 }
 
+                const commentContent = req.comment ? `⚙️ ${req.comment}` : '';
+                const dateContent = req.createdDate ? `<i class="bi bi-calendar3"></i> ${formatDate(req.createdDate)}` : '';
+
+                // Рендеримо картку. Записуємо опис в один рядок у коді, щоб уникнути зайвих відступів pre-wrap
                 card.innerHTML = `
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="fw-bold text-dark">${req.requestType}</span>
-                            <span class="${badgeClass}" style="font-size:0.65rem;">${req.status.replace(/_/g, ' ')}</span>
-                        </div>
-                        <div id="description-container-${req.id}">
-                            ${req.description ? (
-                    req.description.startsWith("Керівник:")
-                        ? `<div class="mt-1 bg-light p-1 rounded text-dark" style="font-size:0.75rem;"><strong>Керівник:</strong> ${req.description.replace("Керівник:", "").trim()}</div>`
-                        : `<div class="mt-1 bg-light p-1 rounded text-dark" style="font-size:0.75rem;">${req.description}</div>`
-                ) : ''}
-                        </div>
-                        
-                        ${req.comment ? `<div class="text-secondary mt-1 border-top pt-1" style="font-size:0.7rem;">⚙️ ${req.comment}</div>` : ''}
-                        ${buttons}
-                    `;
+                       <div class="d-flex justify-content-between align-items-center mb-1">
+                           <span class="fw-bold text-dark">${req.requestType || 'Заявка'}</span>
+                           <span class="${badgeClass}" style="font-size:0.65rem;">${(req.status || '').replace(/_/g, ' ')}</span>
+                       </div>
+                       <div id="description-container-${req.id}" class="mt-1 bg-light p-2 rounded text-dark text-start" style="font-size:0.75rem; white-space: pre-wrap; word-break: break-word;">${req.description ? req.description.trim() : '—'}</div>
+        
+                       <div class="text-secondary mt-1 border-top pt-1 d-flex justify-content-between align-items-center" style="font-size:0.7rem;">
+                            <div>${commentContent}</div>
+                            <div class="text-muted text-end fw-bold" style="font-size:0.65rem;">
+                                ${dateContent}
+                       </div>
+                     </div>
+                    
+                    ${buttons}
+                `;
                 container.appendChild(card);
             });
 
@@ -251,11 +283,14 @@ function loadRequestsFromAPI(empId, container, prefix, buttonEl) {
                 container.appendChild(historyBtn);
             }
 
-        }).catch(e => console.error(e));
+        }).catch(e => {
+        console.error("Критична помилка рендерингу:", e);
+        container.innerHTML = '<span class="text-danger small">Помилка відображення заявок (див. консоль).</span>';
+    });
 }
 
 function enableInlineEditing(requestId, currentText) {
-    if (userRole !== 'ROLE_MANAGER') return; // Додатковий захист
+    if (userRole !== 'ROLE_MANAGER') return;
     const descContainer = document.getElementById(`description-container-${requestId}`);
     const buttonsGroup = document.getElementById(`action-buttons-group-${requestId}`);
 
@@ -263,8 +298,8 @@ function enableInlineEditing(requestId, currentText) {
 
     descContainer.innerHTML = `
             <div class="mt-2">
-                <label class="form-label text-primary fw-bold mb-1" style="font-size: 0.7rem;">Коригування опису для IT:</label>
-                <textarea id="textarea-amend-${requestId}" class="form-control form-control-sm" rows="2" style="font-size: 0.75rem;">${currentText}</textarea>
+                <label class="form-label text-primary fw-bold mb-1" style="font-size: 0.7rem;">Додати коментар керівника:</label>
+                <textarea id="textarea-amend-${requestId}" class="form-control form-control-sm" rows="2" style="font-size: 0.75rem;" placeholder="Напишіть зауваження або коментар..."></textarea>
             </div>
         `;
 
@@ -287,8 +322,18 @@ function submitAmendedRequest(requestId) {
     formData.append('newDescription', textarea.value);
 
     fetch(`/api/employees/requests/${requestId}/amend`, { method: 'POST', body: formData })
-        .then(() => { location.reload(); })
-        .catch(err => console.error(err));
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'success') {
+                changeRequestStatus(requestId, 'ПОГОДЖЕНО_ОЧІКУЄ_ІТ');
+            } else {
+                alert("Помилка при збереженні правок.");
+            }
+        })
+        .catch(err => {
+            console.error("Помилка відправки правок:", err);
+            alert("Не вдалося зв'язатися з сервером.");
+        });
 }
 
 function openHistoryModal(employeeName, allRequests) {
@@ -304,15 +349,20 @@ function openHistoryModal(employeeName, allRequests) {
         if (req.status === 'ПОГОДЖЕНО_ОЧІКУЄ_ІТ') badgeClass = 'badge bg-info text-dark';
 
         let displayText = req.description || req.comment || '—';
-        if (displayText.startsWith("Керівник:")) {
-            displayText = `<strong>Керівник:</strong> ${displayText.replace("Керівник:", "").trim()}`;
-        }
 
         const tr = document.createElement('tr');
+        // Застосовуємо .trim() для displayText, а третю колонку робимо Flexbox-контейнером
         tr.innerHTML = `
                 <td><strong>${req.requestType}</strong></td>
-                <td class="small">${displayText}</td>
-                <td><span class="${badgeClass}">${req.status.replace(/_/g, ' ')}</span></td>
+                <td class="small" style="white-space: pre-wrap; word-break: break-word;">${displayText.trim()}</td>
+                <td>
+                    <div class="d-flex flex-column align-items-start gap-1">
+                        <span class="${badgeClass}">${req.status.replace(/_/g, ' ')}</span>
+                        <small class="text-muted fw-bold" style="font-size: 0.65rem; white-space: nowrap;">
+                            <i class="bi bi-calendar3"></i> ${req.createdDate ? formatDate(req.createdDate) : '—'}
+                        </small>
+                    </div>
+                </td>
             `;
         tbody.appendChild(tr);
     });
@@ -327,18 +377,17 @@ function changeRequestStatus(requestId, statusName) {
         return;
     }
 
-    // Зчитуємо CSRF токени з мета-тегів сторінки
     const token = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
     const header = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
 
     const headers = {};
     if (token && header) {
-        headers[header] = token; // Додаємо захищений токен у заголовок запиту
+        headers[header] = token;
     }
 
     fetch(`/api/employees/requests/${requestId}/status?status=${encodeURIComponent(statusName)}`, {
         method: 'POST',
-        headers: headers // Передаємо заголовки безпеки
+        headers: headers
     })
         .then(res => {
             if (res.ok) {
@@ -382,7 +431,6 @@ function deleteEquipmentDirectly(eqId, empId, isFromModal = false) {
         return;
     }
     if (confirm("Видалити цей ресурс?")) {
-        // Зчитуємо CSRF для видалення
         const token = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
         const header = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content');
 
@@ -393,7 +441,7 @@ function deleteEquipmentDirectly(eqId, empId, isFromModal = false) {
 
         fetch(`/api/equipment/delete/${eqId}`, {
             method: 'POST',
-            headers: headers // Додаємо захист сюди
+            headers: headers
         })
             .then(res => res.json())
             .then(data => {
